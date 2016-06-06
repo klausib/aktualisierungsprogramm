@@ -94,6 +94,8 @@ def shapeUmbenennen(pfadstring,dateistring,dateistring_alt):
 def umcodieren(inputpfad,inputname,codierung,log_attribgesch):
 
     #codierung = 'latin1'
+    dummy = ''
+
     try:
         #Umcodieren der CSV datei nach UTF8
         #falls notwendig
@@ -101,10 +103,10 @@ def umcodieren(inputpfad,inputname,codierung,log_attribgesch):
             f = open(inputpfad + "/" + inputname,'r+')
             data = f.read()
             #inhalt = data.decode('CP850')
-            inhalt = data.decode(codierung) # Typ als String übergeben
+            inhalt = data.decode(codierung,'replace') # Typ als String übergeben
             f.truncate(0)
             f.seek(0)
-            f.write(inhalt.encode('UTF-8'))
+            f.write(inhalt.encode('UTF-8','replace'))
             f.close()
         #Umcodieren der DBASE datei nach UTF8
         #falls notwendig
@@ -130,9 +132,14 @@ def umcodieren(inputpfad,inputname,codierung,log_attribgesch):
                     #werden diese umcodiert
                     if type(recdic[rec2]) == str:
                         feldname = rec2
+                        if not rec[feldname] == None:
 
-                        dummy = rec[feldname].decode(codierung) # in eine Bytestring umwnadeln: Die richtige Codierung muss bekannt sein
-                        rec[feldname] = dummy.encode('utf8')    # dann nach UTF-8 codieren
+                            dummy = rec[feldname].decode(codierung,'replace').encode('utf8','replace') # in eine Bytestring umwnadeln und nach UTF8 umwandeln. Die richtige Codierung muss bekannt sein
+                            rec[feldname] = dummy
+
+                        else:
+                            continue
+
 
                         # Länge des feldes aus den Felddefinitionen bestimmen.
                         # ACHTUNG: Beim Umcodieren von windows codepage (latin1 oder cp1252), in der alle Zeichen nur 1 Byte haben,
@@ -143,7 +150,6 @@ def umcodieren(inputpfad,inputname,codierung,log_attribgesch):
                         for defi in db.fieldDefs:
 
                             if feldname  == defi.name:
-
                                 if defi.length < len(rec[feldname] ):
                                     logroutine(log_attribgesch,'Attribut abgeschnitten: ' + inputpfad + '/' + inputname + ' Spalte: ' + feldname +  ' Zeile: ' + str(zeilen) + '\r' , False)
                                     rec[feldname] = rec[feldname][0:defi.length-1]  # wir müssen 1 Byte mehr abschneiden, da Ös etc. ja zwei Byte haben können, und theoretisch davon 1 Byte abgeschnitten werden könnte was einen Krakel als Resultat hat
@@ -156,7 +162,8 @@ def umcodieren(inputpfad,inputname,codierung,log_attribgesch):
         else:
             return False    #Falsche Datei?
         return True #Kein Fehler
-    except:
+    except Exception as e:
+        print str(e)
         return False    #Es hat einen Fehler gegeben
 
 

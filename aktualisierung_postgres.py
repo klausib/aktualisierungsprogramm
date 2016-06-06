@@ -115,6 +115,9 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
 
 
+            # Umcodieren findet für den Postgres Fall direkt im Sub kopieren des Hauptmoduls statt.
+            # Grund: Ist stabieler
+
 ##            ####################################################################################################
 ##            #Umkodieren falls notwendig (nach UTF8 damit Upload in DB's klappt)
 ##            ####################################################################################################
@@ -136,48 +139,63 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
 
 
-            ####################################################################################################
-            # Umkodieren falls notwendig (nach UTF8 damit Upload in DB's klappt)
-            ####################################################################################################
-
-            if row['nach_utf8'] != 'nein':  # es soll umcodiert werden -> mal schauen
-
-                #ist es beriets im Laufe dieser Aktualisierung umcodiert worden?
-                #das erkennen wir einfach am Suffix, Pech wenn jemand dieses schon verwendet...
-
-                #if not inputname.find('_UTF8') > -1: # -> wir müssen umcoderien
-                if  os.path.exists(inputpfad + '/' + inputname_ohnesuffix + '_UTF8' + os.path.splitext(inputname)[1]):  # UTF8 bereits vorhanden
-                    inputname = inputname_ohnesuffix + '_UTF8' + os.path.splitext(inputname)[1]
-                    loeschliste.append(inputpfad + '/' + inputname)
-                    inputname_ohnesuffix = inputname_ohnesuffix + '_UTF8'       # das shape hat nun einen neuen Namen!
-                else:   # -> wir müssen umcodieren
-                    #Ein Vergleichsobjekt wird instanziert
-                    #nur fürs Kopieren
-                    dShape = Vergleich()
-                    # das gesamte Inputshape umbenennen in neues Shape
-                    if not dShape.kopieren_filebasis(inputpfad,inputname_ohnesuffix,inputpfad, inputname_ohnesuffix + '_UTF8',os.path.splitext(inputname)[1]):
-                        logroutine(log_error,"Schwerer Fehler beim Umbenennen des original Shapes fuer die Umcodierung: - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r' ,False)
-                        errorliste.append(inputpfad + '/' + inputname)
-                        continue    #Stop hier: nächster Datensatz in der Liste
-                    else:   #umbenennen erfolgreich - löschen nicht vergessen -> löschliste
-                        inputname = inputname_ohnesuffix + '_UTF8' + os.path.splitext(inputname)[1]
-                        loeschliste.append(inputpfad + '/' + inputname)
-                        inputname_ohnesuffix = inputname_ohnesuffix + '_UTF8'       # das shape hat nun einen neuen Namen!
-
-
-                    if inputname.find('.shp') > -1:
-
-                        tmp_dbasename = inputname_ohnesuffix + '.dbf'
-                        if not hilfsmodul.umcodieren(inputpfad,tmp_dbasename,row['nach_utf8'],log_attribgesch):
-                            logroutine(log_warning,"Fehler beim Umcodieren - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r'  ,False)    #Warnung setzen aber weitermachen
-                    elif inputname.find('.dbf') > -1:
-                        #hilfsmodul.umcodieren(inputpfad,inputname)
-                        if not hilfsmodul.umcodieren(inputpfad,inputname,row['nach_utf8'],log_attribgesch):
-                            logroutine(log_warning,"Fehler beim Umcodieren - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r'  ,False)    #Warnung setzen aber weitermachen
-                    elif inputname.find('.csv') > -1:
-                        #hilfsmodul.umcodieren(inputpfad,inputname)
-                        if not hilfsmodul.umcodieren(inputpfad,inputname,row['nach_utf8'],log_attribgesch):
-                            logroutine(log_warning,"Fehler beim Umcodieren - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname  + '\r' ,False)    #Warnung setzen aber weitermachen
+##            ####################################################################################################
+##            # Umkodieren falls notwendig (nach UTF8 damit Upload in DB's klappt)
+##            ####################################################################################################
+##
+##            if row['nach_utf8'] != 'nein' and inputname.find('.shp') < 0:  # es soll umcodiert werden -> nur nicht für shapes
+##
+##                #ist es beriets im Laufe dieser Aktualisierung umcodiert worden?
+##                #das erkennen wir einfach am Suffix, Pech wenn jemand dieses schon verwendet...
+##
+##                #if not inputname.find('_UTF8') > -1: # -> wir müssen umcoderien
+##                if  os.path.exists(inputpfad + '/' + inputname_ohnesuffix + '_UTF8' + os.path.splitext(inputname)[1]):  # UTF8 bereits vorhanden
+##                    inputname = inputname_ohnesuffix + '_UTF8' + os.path.splitext(inputname)[1]
+##                    loeschliste.append(inputpfad + '/' + inputname)
+##                    inputname_ohnesuffix = inputname_ohnesuffix + '_UTF8'       # das shape hat nun einen neuen Namen!
+##                else:   # -> wir müssen umcodieren
+##                    #Ein Vergleichsobjekt wird instanziert
+##                    #nur fürs Kopieren
+##
+##                    dShape = Vergleich()
+##                    # das gesamte Inputshape umbenennen in neues Shape
+##                    if not dShape.kopieren_filebasis(inputpfad,inputname_ohnesuffix,inputpfad, inputname_ohnesuffix + '_UTF8',os.path.splitext(inputname)[1]):
+##                        logroutine(log_error,"Schwerer Fehler beim Umbenennen des original Shapes fuer die Umcodierung: - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r' ,False)
+##                        errorliste.append(inputpfad + '/' + inputname)
+##                        continue    #Stop hier: nächster Datensatz in der Liste
+##                    else:   #umbenennen erfolgreich - löschen nicht vergessen -> löschliste
+##                        inputname = inputname_ohnesuffix + '_UTF8' + os.path.splitext(inputname)[1]
+##                        loeschliste.append(inputpfad + '/' + inputname)
+##                        inputname_ohnesuffix = inputname_ohnesuffix + '_UTF8'       # das shape hat nun einen neuen Namen!
+##
+##
+##                    if inputname.find('.shp') > -1:
+##                        pass
+##                        tmp_dbasename = inputname_ohnesuffix + '.dbf'
+##                        if not hilfsmodul.umcodieren(inputpfad,tmp_dbasename,row['nach_utf8'],log_attribgesch):
+##                            logroutine(log_warning,"Fehler beim Umcodieren - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r'  ,False)    #Warnung setzen aber weitermachen
+##                    elif inputname.find('.dbf') > -1:
+##                        #hilfsmodul.umcodieren(inputpfad,inputname)
+##                        if not hilfsmodul.umcodieren(inputpfad,inputname,row['nach_utf8'],log_attribgesch):
+##                            logroutine(log_warning,"Fehler beim Umcodieren - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r'  ,False)    #Warnung setzen aber weitermachen
+##                    elif inputname.find('.csv') > -1:
+##                        #hilfsmodul.umcodieren(inputpfad,inputname)
+##                        if not hilfsmodul.umcodieren(inputpfad,inputname,row['nach_utf8'],log_attribgesch):
+##                            logroutine(log_warning,"Fehler beim Umcodieren - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname  + '\r' ,False)    #Warnung setzen aber weitermachen
+##
+##
+##
+##
+##
+##
+##
+##
+##
+##
+##
+##            ####################################################################################################
+##            # ENDE Modul umcodieren ############################################################################
+##            ####################################################################################################
 
 
 
@@ -186,7 +204,6 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
             #bis zum Shape gefüttert. ODER nur mit dem Verzeichnispfad. Dann können
             #alle Shapes in diesem Verzeichnis als Layer geladen werden!!
             #WICHTIG: UNBEDINGT kein / am Schluss, sonst gehts nicht!
-
                 #öffnen des Eingangsdatensatzes:
             flag = ''
             if row["quelltyp"] == 'shape':  #öffnen eines Shapes
@@ -217,6 +234,9 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
             #prüfen ob der Ausgangsdatensatz vorhanden ist
             lyrPostgisOut = postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix))
             if not lyrPostgisOut == None and row["ds_neu"] == 'ja':  #Wir haben den datensatz als neu definiert, d.h. ein
+                if not postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix) + '_temp_alt') == None:
+                    postgisOut.DeleteLayer(string.lower(outputname_ohnesuffix) + '_temp_alt')
+                postgisOut.CopyLayer(lyrPostgisOut,string.lower(outputname_ohnesuffix) + '_temp_alt')
                 postgisOut.DeleteLayer(string.lower(outputname_ohnesuffix))       #eventuell bestehender soll überschrieben werden
 
             if lyrPostgisOut == None and row["ds_neu"] == 'nein':
@@ -234,10 +254,22 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
             if row["ds_neu"] == 'ja':
 
 
+                 # Schema extrahieren
+                param_list = string.split(postgisOut.GetName())
+                schema = ''
+
+                for param in param_list:
+                        if string.find(param,'schemas') >= 0:
+                            schema = string.replace(param,'schemas=','')
+                            #print schema
+                        elif string.find(param,'Schemas=') >= 0:
+                            schema = string.replace(param,'Schemas=','')
+                            #print schema
 
                 #Ein Vergleichsobjekt wird instanziert
                 #Es ist für kopieren, vergleich etc...
                 dShape = Vergleich(lyrIn,dsIn)
+
 
                 bezugssystem = (row["bezugssystem"])    #Das Soll Bezugssystem (statisch in der Kopiertabelle eingetragen)
 
@@ -255,23 +287,43 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
                 # ACHTUNG: Die Gross/Kleinschreibung des Shapes orientiert sich an dem String outputname in
                 # der Steuertabelle: So wies dort drin ist wird der Shapename geschrieben
-                rueckgabe = dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix),row["zieltyp"])
+                rueckgabe = dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix),row["zieltyp"],row['nach_utf8'])
                 #if not dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix),row["zieltyp"]):    #outputname ist ja die sqlite Datei
                 if not rueckgabe[0]:    #outputname ist ja die sqlite Datei
                     logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + outputname + ' ' + str(rueckgabe[1]) + '\r' ,False)
                     #errorliste.append(inputpfad + '/' + inputname)
                     errorliste.append(inputpfad + '/' + outputname)
+
+                    # wenn möglich, zurückstellen
+                    lyr_t = postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix) + '_temp_alt')
+                    if not lyr_t == None:
+                        postgisOut.CopyLayer(lyr_t, string.lower(outputname_ohnesuffix))
+                        postgisOut.DeleteLayer(string.lower(outputname_ohnesuffix) + '_temp_alt')
+
                     continue    #Stop: Ab zum nächsten Datensatz
 
                 #Püfen ob auch wirklich alle Feature übernommen wurden
-                if lyrIn.GetFeatureCount() != postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix)).GetFeatureCount():
-                    logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' - Features fehlen' + '\r' ,False)
+                diff = lyrIn.GetFeatureCount() - postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix)).GetFeatureCount()
+##                print str(lyrIn.GetFeatureCount())
+##                print str(postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix)).GetFeatureCount())
+##                exit(0)
+                if abs(diff) > 0:
+                    logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(abs(diff)) + ' - Features fehlen' + '\r' ,False)
                     #errorliste.append(inputpfad + '/' + inputname)
                     errorliste.append(inputpfad + '/' + outputname)
 
-                    # Temp Tabelle löschen
-                    query =    "Drop Table " + string.lower(outputname_ohnesuffix)
-                    postgisOut.ExecuteSQL(query)
+##                    # Temp Tabelle löschen
+##                    query =    "Drop Table " + string.lower(outputname_ohnesuffix)
+##                    postgisOut.ExecuteSQL(query)
+
+                    # wenn nötig, zurückstellen
+                    lyr_t = postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix) + '_temp_alt')
+                    if not lyr_t == None:
+                        postgisOut.DeleteLayer(string.lower(outputname_ohnesuffix))
+                        postgisOut.CopyLayer(lyr_t, string.lower(outputname_ohnesuffix))
+                        postgisOut.DeleteLayer(string.lower(outputname_ohnesuffix) + '_temp_alt')
+
+
 
                     #löschen des Geometrieeintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
                     query =    "delete from geometry_columns where f_table_name = '" + string.lower(outputname_ohnesuffix)
@@ -282,7 +334,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                 #POSTGIS Index aktualisieren:
                 #ACHTUNG: Vorlage für den Index ist der Index beim Shapefile oder des DBASE File.
                 #Der geometrische Index wird immer angelegt
-                abgleich = indexabgleich(lyrIn,dsIn,postgisOut.GetLayerByName(outputname_ohnesuffix),postgisOut,True)
+                abgleich = indexabgleich(lyrIn,dsIn,postgisOut.GetLayerByName(outputname_ohnesuffix),postgisOut,schema, True)
                 ret_ind = abgleich.indexAbgl()
                 if ret_ind == 4:
                     logroutine(log_index_missing,"Fehler beim Indizieren des des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r' ,False)
@@ -295,10 +347,15 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     #errorliste.append(inputpfad + '/' + inputname)
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Stop hier: nächster Datensatz in der Liste
+
                 else:
                     logroutine(log_ok, "Kopieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     #Alles OK, das Original kann in die Liste
                     #der zu löschenden Shapes aufgenommen werden
+                     # wenn möglich, zurückstellen
+                    if not postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix) + '_temp_alt') == None:
+                        postgisOut.DeleteLayer(string.lower(outputname_ohnesuffix) + '_temp_alt')
+
                     loeschliste.append(inputpfad + '/' + outputname)
 
 
@@ -324,6 +381,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
             # Datensatz aktualisieren
             ###################################
             elif row["ds_neu"] == 'nein':
+
 
                 #Ein Vergleichsobjekt wird instanziert
                 #Es ist für kopieren, vergleich etc...
@@ -367,7 +425,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
                 # ACHTUNG: Die Gross/Kleinschreibung des Shapes orientiert sich an dem String outputname in
                 # der Steuertabelle: So wies dort drin ist wird der Shapename geschrieben
-                rueckgabe = dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix) + '_temp_aktual',row["zieltyp"])
+                rueckgabe = dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix) + '_temp_aktual',row["zieltyp"],row['nach_utf8'])
                 #if not dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix) + '_temp_aktual',row["zieltyp"]):   #outputname ist ja die sqlite Datei
                 if not rueckgabe[0]:   #outputname ist ja die sqlite Datei
                     logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(rueckgabe[1]) + '\r',False)
@@ -376,45 +434,81 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     continue    #Stop: Ab zum nächsten Datensatz
 
 
-                #Püfen ob auch wirklich alle Feature übernommen wurden
-                if lyrIn.GetFeatureCount() !=  postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual")).GetFeatureCount():
-                    logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' - Features fehlen' + '\r' ,False)
-                    #errorliste.append(inputpfad + '/' + inputname)
-                    errorliste.append(inputpfad + '/' + outputname)
-
-                    # Temp Tabelle löschen
-                    query =    "Drop Table " + string.lower(outputname_ohnesuffix) + "_temp_aktual"
-                    postgisOut.ExecuteSQL(query)
-
-                    #löschen des Geometrieeintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
-                    query =    "delete from geometry_columns where f_table_name = '" + string.lower(outputname_ohnesuffix) + "_temp_aktual'"
-                    postgisOut.ExecuteSQL(query)
-
-                    continue    #Stop: Ab zum nächsten Datensatz
+##                #Püfen ob auch wirklich alle Feature übernommen wurden
+##                diff = lyrIn.GetFeatureCount() -  postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual")).GetFeatureCount()
+##                if abs(diff) > 0:
+##                    logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(abs(diff)) + ' - Features fehlen' + '\r' ,False)
+##                    #errorliste.append(inputpfad + '/' + inputname)
+##                    errorliste.append(inputpfad + '/' + outputname)
+##                    print 'hierrrrr'
+##                    # Temp Tabelle löschen
+##                    query =    "BEGIN;drop table " + string.lower(schema + '.' + outputname_ohnesuffix) + "_temp_aktual;COMMIT;"
+##                    print 'query=' + str(query)
+##                    postgisOut.ExecuteSQL(query)
+##                    print 'dort'
+##
+##                    #löschen des Geometrieeintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
+##                    query =    "delete from geometry_columns where f_table_name = '" + string.lower(outputname_ohnesuffix) + "_temp_aktual'"
+##                    postgisOut.ExecuteSQL(query)
+##
+##                    continue    #Stop: Ab zum nächsten Datensatz
 
                 try:
+                    # Schema extrahieren
+                    param_list = string.split(postgisOut.GetName())
+                    schema = ''
+
+                    for param in param_list:
+                            if string.find(param,'schemas') >= 0:
+                                schema = string.replace(param,'schemas=','')
+                                #print schema
+                            elif string.find(param,'Schemas=') >= 0:
+                                schema = string.replace(param,'Schemas=','')
+                                #print schema
+
                     #die Geometriespalte finden!
                     geometriespalte = ''
-                    geometriespalte = lyrPostgisOut.GetGeometryColumn()  #gibt die geometriespalte zurück oder ''
+                    geometriespalte = lyrPostgisOut.GetGeometryColumn()  #gibt die Geometriespalte zurück oder ''
 
-                    if not geometriespalte == '':   #wenn es keine gibt ist die variable ''
-                        query = "alter sequence " + inputname_ohnesuffix + "_ogc_fid_seq restart with 1"
+
+                    #Püfen ob auch wirklich alle Feature übernommen wurden
+                    diff = lyrIn.GetFeatureCount() -  postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual")).GetFeatureCount()
+                    if abs(diff) > 0:
+                        logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(abs(diff)) + ' - Features fehlen' + '\r' ,False)
+                        #errorliste.append(inputpfad + '/' + inputname)
+                        errorliste.append(inputpfad + '/' + outputname)
+                        # Temp Tabelle löschen
+                        query =    "BEGIN;drop table " + string.lower(schema + '.' + outputname_ohnesuffix) + "_temp_aktual;COMMIT;"
                         postgisOut.ExecuteSQL(query)
-                        query = "BEGIN;DELETE from " + string.lower(outputname_ohnesuffix) + ";insert into " + string.lower(outputname_ohnesuffix) + " (" + Attributliste + ",\"" + geometriespalte + "\" ) select " + Attributliste + ",\"" + geometriespalte + "\" from " + string.lower(outputname_ohnesuffix) + "_temp_aktual;COMMIT"
+
+
+                        #löschen des Geometrieeintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
+                        query =    "delete from geometry_columns where f_table_name = '" + string.lower(outputname_ohnesuffix) + "_temp_aktual'"
+                        postgisOut.ExecuteSQL(query)
+                        continue    #Stop: Ab zum nächsten Datensatz
+
+
+
+
+                    if not geometriespalte == '':   # wenn es keine gibt ist die variable ''
+                        query = "alter sequence " + string.lower(schema + '.' + outputname_ohnesuffix) + "_ogc_fid_seq restart with 1"
+                        postgisOut.ExecuteSQL(query)
+                        query = "BEGIN;DELETE from " + string.lower(schema + '.' + outputname_ohnesuffix) + ";insert into " + string.lower(schema + '.' + outputname_ohnesuffix) + " (" + string.lower(Attributliste) + ",\"" + string.lower(geometriespalte) + "\" ) select " + string.lower(Attributliste) + ",\"" + string.lower(geometriespalte) + "\" from " + string.lower(schema + '.' + outputname_ohnesuffix) + "_temp_aktual;COMMIT;"
                         postgisOut.ExecuteSQL(query)
                     else:
-                        query = "alter sequence " + outputname_ohnesuffix + "_ogc_fid_seq restart with 1"
+                        query = "alter sequence " + string.lower(schema + '.' + outputname_ohnesuffix) + "_ogc_fid_seq restart with 1"
                         postgisOut.ExecuteSQL(query)
-                        query = "BEGIN;DELETE from " + outputname_ohnesuffix + ";insert into " + outputname_ohnesuffix + " (" + Attributliste + ")  select " + Attributliste + " from " + outputname_ohnesuffix + "_temp_aktual;COMMIT"
+                        query = "BEGIN;DELETE from " + string.lower(schema + '.' + outputname_ohnesuffix) + ";insert into " + string.lower(schema + '.' + outputname_ohnesuffix) + " (" + string.lower(Attributliste) + ")  select " + string.lower(Attributliste) + " from " + string.lower(schema + '.' + outputname_ohnesuffix) + "_temp_aktual;COMMIT;"
                         postgisOut.ExecuteSQL(query)
 
                     # Temp Tabelle löschen
-                    query =    "Drop Table " + string.lower(outputname_ohnesuffix) + "_temp_aktual"
+                    query =    "BEGIN;drop table " + string.lower(schema + '.' + outputname_ohnesuffix) + "_temp_aktual;COMMIT;"
                     postgisOut.ExecuteSQL(query)
 
                     #löschen des Geometrieeintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
-                    query =    "delete from geometry_columns where f_table_name = '" + string.lower(outputname_ohnesuffix) + "_temp_aktual'"
+                    query =    "delete from geometry_columns where f_table_name = '" + string.lower(schema + '.' + outputname_ohnesuffix) + "_temp_aktual'"
                     postgisOut.ExecuteSQL(query)
+
 
                     #logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     #Alles OK, das Original kann in die Liste
@@ -422,16 +516,19 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     loeschliste.append(inputpfad + '/' + outputname)
 
                 except:
+
                     logroutine(log_error,"SQL Fehler in der Postgis DB " + str(row["primindex"]) + " "  + inputpfad + '/' + outputname + '\r' ,False)
                     #errorliste.append(inputpfad + '/' + inputname)
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Abbrechen und weiter zum nächsten Datensatz
 
                 #POSTGIS Index aktualisieren:
-                #ACHTUNG: Vorlage für den Indiex ist der Index beim Shapefile oder des DBASE File.
+                #ACHTUNG: Vorlage für den Index ist der Index beim Shapefile oder des DBASE File.
                 #Der geometrische Index wird immer angelegt
-                abgleich = indexabgleich(lyrIn,dsIn,postgisOut.GetLayerByName(outputname_ohnesuffix),postgisOut,False)
+
+                abgleich = indexabgleich(lyrIn,dsIn,postgisOut.GetLayerByName(outputname_ohnesuffix),postgisOut, schema, False)
                 ret_ind = abgleich.indexAbgl()
+
                 if ret_ind == 4:
                     logroutine(log_index_missing,"Fehler beim Indizieren des des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r' ,False)
 
@@ -444,7 +541,6 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     logroutine(log_error,"Fehler beim Aktualisieren des Datensatzes - Endkontrolle Datensatz - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r' ,False)
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Stop hier: nächster Datensatz in der Liste
-                    exit(0)
                 else:
                     logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     #Alles OK, das Original kann in die Liste
@@ -468,4 +564,5 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
         return loeschliste, errorliste    #wir geben ein Tupel zurück
 
     except Exception as e:
+        print str(e)
         return [],[]

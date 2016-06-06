@@ -291,7 +291,7 @@ class Vergleich():
         except:
             return False
 
-    def kopieren(self,dsOut,lyrIn,name,zieltyp):
+    def kopieren(self,dsOut,lyrIn,name,zieltyp,codierung=''):
 
         try:
             #srs = osr.SpatialReference()
@@ -361,60 +361,59 @@ class Vergleich():
                 mem_ds = mem_drv.CreateDataSource( 'out' )
 
 
-                if lyrIn.GetGeomType() == 100:   #Also keine Geometrie vorhanden
+##                if lyrIn.GetGeomType() == 100 and driverName == "SQLite":   #Also keine Geometrie vorhanden
 
-                    if driverName == "PostgreSQL":
-                        ly = dsOut.CopyLayer(lyrIn,name, ['SPATIAL_INDEX=no','PRECISION=no','GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
-                    elif driverName == "SQLite":
+##                    if driverName == "PostgreSQL":
+##                        ly = dsOut.CopyLayer(lyrIn,name, ['SPATIAL_INDEX=no','PRECISION=no','GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
+##                    elif driverName == "SQLite":
+##                        ly = dsOut.CopyLayer(lyrIn,name, ['GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
+
+
+
+                if driverName == "SQLite":
+
+                    if lyrIn.GetGeomType() == 100:  # also KEINE Geometrie Tabelle
                         ly = dsOut.CopyLayer(lyrIn,name, ['GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
+                    else:
+                        memme = mem_ds.CreateLayer(name,srs,lyrIn.GetGeomType())
 
-                elif driverName == "SQLite":
+                        i = 0
+                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
+                        while i < feldanzahl:
+                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            memme.CreateField(Fdefn)
+                            i = i+1
 
-##                    # Create a memory OGR datasource to put results in. Von frank W. Die Doku ist einfach schwach
-##                    # Deshalb wirds hier zu Dokumentationszwecken dringelassen:
-##                    # Der Memory Layer ist deutlich performanter bei CreateFeature als wenn es direkt auf eine
-##                    # Spatial Lite DB angewandt wird
-##                    mem_drv = ogr.GetDriverByName( 'Memory' )
-##                    mem_ds = mem_drv.CreateDataSource( 'out' )
-                    memme = mem_ds.CreateLayer(name,srs,lyrIn.GetGeomType())
+                        # Unbedingt die Geometrie vereinheitlichen, im Shape ist das anscheinend
+                        # nicht immer sauber und würde sonst nicht in die DB übernommen werden!!!
+                        # Mehr Unterscheidungen (der Geometrie) gibt es derzeit noch nicht, also Single point oder line
+                        for fea in lyrIn:
 
-                    i = 0
-                    feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-                    while i < feldanzahl:
-                        Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-                        memme.CreateField(Fdefn)
-                        i = i+1
+                            # None kann vom Shape weg vorkommen, deshalb die Prüfung
+                            # Gibts ein Feature ohne Geometrie (das kann beim Shape vorkommen), wirds
+                            # ignoriert.
+                            if not fea.GetGeometryRef() == None:
+                                gemi = fea.GetGeometryRef().Clone()
+                            else:
+                                next
 
-                    # Unbedingt die Geometrie vereinheitlichen, im Shape ist das anscheinend
-                    # nicht immer sauber und würde sonst nicht in die DB übernommen werden!!!
-                    # Mehr Unterscheidungen (der Geometrie) gibt es derzeit noch nicht, also Single point oder line
-                    for fea in lyrIn:
+                            if lyrIn.GetGeomType() == ogr.wkbMultiPoint:
+                                gemi = ogr.ForceToMultiPoint(gemi)
+                            elif lyrIn.GetGeomType() == ogr.wkbMultiLineString:
+                                gemi = ogr.ForceToMultiLineString(gemi)
+                            elif lyrIn.GetGeomType() == ogr.wkbMultiPolygon:
+                                gemi = ogr.ForceToMultiPolygon(gemi)
+                            elif lyrIn.GetGeomType() == ogr.wkbPolygon:
+                                gemi = ogr.ForceToPolygon(gemi)
+                            else:
+                                gemi = gemi.Clone()
 
-                        # None kann vom Shape weg vorkommen, deshalb die Prüfung
-                        # Gibts ein Feature ohne Geometrie (das kann beim Shape vorkommen), wirds
-                        # ignoriert.
-                        if not fea.GetGeometryRef() == None:
-                            gemi = fea.GetGeometryRef().Clone()
-                        else:
-                            next
+                            fea.SetGeometry(gemi)
+                            memme.CreateFeature(fea)
+                        if memme == None:
+                            raise Exception
 
-                        if lyrIn.GetGeomType() == ogr.wkbMultiPoint:
-                            gemi = ogr.ForceToMultiPoint(gemi)
-                        elif lyrIn.GetGeomType() == ogr.wkbMultiLineString:
-                            gemi = ogr.ForceToMultiLineString(gemi)
-                        elif lyrIn.GetGeomType() == ogr.wkbMultiPolygon:
-                            gemi = ogr.ForceToMultiPolygon(gemi)
-                        elif lyrIn.GetGeomType() == ogr.wkbPolygon:
-                            gemi = ogr.ForceToPolygon(gemi)
-                        else:
-                            gemi = gemi.Clone()
-
-                        fea.SetGeometry(gemi)
-                        memme.CreateFeature(fea)
-                    if memme == None:
-                        raise Exception
-
-                    dsOut.CopyLayer(memme,name,['SPATIAL_INDEX=no','PRECISION=no', 'GEOM_TYPE=geometry', 'GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
+                        dsOut.CopyLayer(memme,name,['SPATIAL_INDEX=no', 'GEOM_TYPE=geometry', 'GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
 
 
                 # Einen leeren Layer in der Postgis erzeugen
@@ -424,30 +423,53 @@ class Vergleich():
                 elif driverName == "PostgreSQL":
 
 
-##                    # Create a memory OGR datasource to put results in. Von frank W. Die Doku ist einfach schwach
-##                    # Der Memory Layer ist deutlich performanter bei CreateFeature als wenn es direkt auf eine
-##                    # reale Datenquelle angewandt wird
-##                    mem_drv = ogr.GetDriverByName( 'Memory' )
-##                    mem_ds = mem_drv.CreateDataSource( 'out' )
+
+                    if lyrIn.GetGeomType() == 100: # Keine Geometrie
+                        ly = mem_ds.CreateLayer(name,None,ogr.wkbNone)
+
+                        i = 0
+
+                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
+                        while i < feldanzahl:
+                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            Fdefn.SetName(string.lower(Fdefn.GetName()))
+                            ly.CreateField(Fdefn)
+                            i = i+1
+
+                        # Der gesmate Layer muss neu geschrieben werden
+                        # damit Probleme beim Laden in die Datenbank
+                        # möglichst ausgeschlossen werden
+                        for fea in lyrIn:
+
+
+                            fea_tmp = ogr.Feature(fea.GetDefnRef())
+
+
+                            # sachinformation einfügen
+
+                            i = 0
+                            while i < feldanzahl:
+                                if not fea.GetField(i) == None:
+
+                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                            if codierung == 'nein' or '':
+                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                            else:   # bei Bedarf umcodieren
+                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                                fea_tmp.SetField(i,kasperle)
+                                    else:   # numerisches Feld
+                                        fea_tmp.SetField(i,fea.GetField(i))
+                                i = i+1
+
+
+                            # ein neues (konvertiertes) Feature im Memory Layer erzeugen
+                            fea_tmp.SetFID(-1)
+                            ly.CreateFeature(fea_tmp)
 
 
                     #Point oder Multipoint
-                    if lyrIn.GetGeomType() == 1 or lyrIn.GetGeomType() == 4:
-##                        # Einen neuen Layer in der datenbank erzeugen
-##                        ly = dsOut.CreateLayer(name,srs,ogr.wkbMultiPoint,['SPATIAL_INDEX=no','PRECISION=no','GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
-##
-##                        i = 0
-##                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-##                        while i < feldanzahl:
-##                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-##                            ly.CreateField(Fdefn)
-##                            i = i+1
+                    elif lyrIn.GetGeomType() == 1 or lyrIn.GetGeomType() == 4:
 
-##                        # Create a memory OGR datasource to put results in. Von frank W. Die Doku ist einfach schwach
-##                        # Der Memory Layer ist deutlich performanter bei CreateFeature als wenn es direkt auf eine
-##                        # reale Datenquelle angewandt wird
-##                        mem_drv = ogr.GetDriverByName( 'Memory' )
-##                        mem_ds = mem_drv.CreateDataSource( 'out' )
 
                         ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPoint)
 
@@ -455,6 +477,7 @@ class Vergleich():
                         feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
                         while i < feldanzahl:
                             Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            Fdefn.SetName(string.lower(Fdefn.GetName()))
                             ly.CreateField(Fdefn)
                             i = i+1
 
@@ -473,10 +496,21 @@ class Vergleich():
                             fea_tmp.SetGeometry(gemi)
 
                             # sachinformation einfügen
+
                             i = 0
                             while i < feldanzahl:
-                                fea_tmp.SetField(i,fea.GetField(i))
+                                if not fea.GetField(i) == None:
+
+                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                            if codierung == 'nein' or '':
+                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                            else:   # bei Bedarf umcodieren
+                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                                fea_tmp.SetField(i,kasperle)
+                                    else:   # numerisches Feld
+                                        fea_tmp.SetField(i,fea.GetField(i))
                                 i = i+1
+
 
                             # ein neues (konvertiertes) Feature im Memory Layer erzeugen
                             fea_tmp.SetFID(-1)
@@ -484,37 +518,25 @@ class Vergleich():
 
 
 
+
                     #Line oder Multiline
                     elif lyrIn.GetGeomType() == 2 or lyrIn.GetGeomType() == 5:
 
-##                        # Einen neuen Layer in der datenbank erzeugen
-##                        ly = dsOut.CreateLayer(name,srs,ogr.wkbMultiLineString,['SPATIAL_INDEX=no','PRECISION=no','GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
-##
-##                        i = 0
-##                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-##                        while i < feldanzahl:
-##                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-##                            ly.CreateField(Fdefn)
-##                            i = i+1
-
-
-##                        # Create a memory OGR datasource to put results in. Von frank W. Die Doku ist einfach schwach
-##                        # Der Memory Layer ist deutlich performanter bei CreateFeature als wenn es direkt auf eine
-##                        # reale Datenquelle angewandt wird
-##                        mem_drv = ogr.GetDriverByName( 'Memory' )
-##                        mem_ds = mem_drv.CreateDataSource( 'out' )
 
                         ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiLineString)
+
                         i = 0
                         feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
                         while i < feldanzahl:
                             Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            Fdefn.SetName(string.lower(Fdefn.GetName()))
                             ly.CreateField(Fdefn)
                             i = i+1
 
                         # Der gesmate Layer muss neu geschrieben werden
                         # damit Probleme beim Laden in die Datenbank
                         # möglichst ausgeschlossen werden
+                        err = 0
                         for fea in lyrIn:
 
                             # Umwandeln der Geometrie in Multilinestring
@@ -527,41 +549,39 @@ class Vergleich():
                             fea_tmp.SetGeometry(gemi)
 
                             # sachinformation einfügen
+
                             i = 0
                             while i < feldanzahl:
-                                fea_tmp.SetField(i,fea.GetField(i))
+                                if not fea.GetField(i) == None:
+
+                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                            if codierung == 'nein' or '':
+                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                            else:   # bei Bedarf umcodieren
+                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                                fea_tmp.SetField(i,kasperle)
+                                    else:   # numerisches Feld
+                                        fea_tmp.SetField(i,fea.GetField(i))
                                 i = i+1
+
 
                             # ein neues (konvertiertes) Feature im Memory Layer erzeugen
                             fea_tmp.SetFID(-1)
                             ly.CreateFeature(fea_tmp)
 
 
+
+
                     #Polygon oder Multipolygon
                     elif lyrIn.GetGeomType() == 3 or lyrIn.GetGeomType() == 6:
 
-
-##                        # Einen neuen Layer in der datenbank erzeugen
-##                        ly = dsOut.CreateLayer(name,srs,ogr.wkbMultiPolygon,['SPATIAL_INDEX=no','PRECISION=yes','GEOMETRY_NAME=the_geom', 'LAUNDER=yes'])
-##
-##                        i = 0
-##                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-##                        while i < feldanzahl:
-##                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-##                            ly.CreateField(Fdefn)
-##                            i = i+1
-
-##                        # Create a memory OGR datasource to put results in. Von frank W. Die Doku ist einfach schwach
-##                        # Der Memory Layer ist deutlich performanter bei CreateFeature als wenn es direkt auf eine
-##                        # reale Datenquelle angewandt wird
-##                        mem_drv = ogr.GetDriverByName( 'Memory' )
-##                        mem_ds = mem_drv.CreateDataSource( 'out' )
                         ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPolygon)
 
                         i = 0
                         feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
                         while i < feldanzahl:
                             Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            Fdefn.SetName(string.lower(Fdefn.GetName()))
                             ly.CreateField(Fdefn)
                             i = i+1
 
@@ -579,15 +599,28 @@ class Vergleich():
                             # gemoetrie einfügen (die geänderte)
                             fea_tmp.SetGeometry(gemi)
 
-                            # Sachinformation einfügen
+                            # sachinformation einfügen
+
                             i = 0
                             while i < feldanzahl:
-                                fea_tmp.SetField(i,fea.GetField(i))
+                                if not fea.GetField(i) == None:
+
+                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                            if codierung == 'nein' or '':
+                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                            else:   # bei Bedarf umcodieren
+                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                                fea_tmp.SetField(i,kasperle)
+                                    else:   # numerisches Feld
+                                        fea_tmp.SetField(i,fea.GetField(i))
                                 i = i+1
+
 
                             # ein neues (konvertiertes) Feature im Memory Layer erzeugen
                             fea_tmp.SetFID(-1)
-                            error = ly.CreateFeature(fea_tmp)
+                            ly.CreateFeature(fea_tmp)
+
+
 
                     # Punkte mit 3D
                     elif lyrIn.GetGeomType() == ogr.wkbMultiPoint25D   or lyrIn.GetGeomType() == ogr.wkbPoint25D  :
@@ -599,6 +632,7 @@ class Vergleich():
                         feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
                         while i < feldanzahl:
                             Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            Fdefn.SetName(string.lower(Fdefn.GetName()))
                             ly.CreateField(Fdefn)
                             i = i+1
 
@@ -616,15 +650,27 @@ class Vergleich():
                             # gemoetrie einfügen (die geänderte)
                             fea_tmp.SetGeometry(gemi)
 
-                            # Sachinformation einfügen
+                            # sachinformation einfügen
+
                             i = 0
                             while i < feldanzahl:
-                                fea_tmp.SetField(i,fea.GetField(i))
+                                if not fea.GetField(i) == None:
+
+                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                            if codierung == 'nein' or '':
+                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                            else:   # bei Bedarf umcodieren
+                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                                fea_tmp.SetField(i,kasperle)
+                                    else:   # numerisches Feld
+                                        fea_tmp.SetField(i,fea.GetField(i))
                                 i = i+1
+
 
                             # ein neues (konvertiertes) Feature im Memory Layer erzeugen
                             fea_tmp.SetFID(-1)
                             ly.CreateFeature(fea_tmp)
+
 
                     # Linien mit 3D
                     elif lyrIn.GetGeomType() == ogr.wkbMultiLineString25D  or lyrIn.GetGeomType() == ogr.wkbLineString25D :
@@ -636,6 +682,7 @@ class Vergleich():
                         feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
                         while i < feldanzahl:
                             Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            Fdefn.SetName(string.lower(Fdefn.GetName()))
                             ly.CreateField(Fdefn)
                             i = i+1
 
@@ -653,15 +700,27 @@ class Vergleich():
                             # gemoetrie einfügen (die geänderte)
                             fea_tmp.SetGeometry(gemi)
 
-                            # Sachinformation einfügen
+                             # sachinformation einfügen
+
                             i = 0
                             while i < feldanzahl:
-                                fea_tmp.SetField(i,fea.GetField(i))
+                                if not fea.GetField(i) == None:
+
+                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                            if codierung == 'nein' or '':
+                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                            else:   # bei Bedarf umcodieren
+                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                                fea_tmp.SetField(i,kasperle)
+                                    else:   # numerisches Feld
+                                        fea_tmp.SetField(i,fea.GetField(i))
                                 i = i+1
+
 
                             # ein neues (konvertiertes) Feature im Memory Layer erzeugen
                             fea_tmp.SetFID(-1)
                             ly.CreateFeature(fea_tmp)
+
 
                     # Polygone mit 3D
                     elif lyrIn.GetGeomType() == ogr.wkbMultiPolygon25D  or lyrIn.GetGeomType() == ogr.wkbPolygon25D :
@@ -673,6 +732,7 @@ class Vergleich():
                         feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
                         while i < feldanzahl:
                             Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                            Fdefn.SetName(string.lower(Fdefn.GetName()))
                             ly.CreateField(Fdefn)
                             i = i+1
 
@@ -690,25 +750,38 @@ class Vergleich():
                             # gemoetrie einfügen (die geänderte)
                             fea_tmp.SetGeometry(gemi)
 
-                            # Sachinformation einfügen
+                            # sachinformation einfügen
+
                             i = 0
                             while i < feldanzahl:
-                                fea_tmp.SetField(i,fea.GetField(i))
+                                if not fea.GetField(i) == None:
+
+                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                            if codierung == 'nein' or '':
+                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                            else:   # bei Bedarf umcodieren
+                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                                fea_tmp.SetField(i,kasperle)
+                                    else:   # numerisches Feld
+                                        fea_tmp.SetField(i,fea.GetField(i))
                                 i = i+1
+
 
                             # ein neues (konvertiertes) Feature im Memory Layer erzeugen
                             fea_tmp.SetFID(-1)
                             ly.CreateFeature(fea_tmp)
 
+
                     # Fertig: der Memorylayer mit dem gesäuberten Inhalt des Shapes kann in die Datenbank kopiert werden
-                    dsOut.CopyLayer(ly,name,['SPATIAL_INDEX=no','PRECISION=no','GEOM_TYPE=geometry', 'GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
+                    #print str(ly.GetFeatureCount())
+                    dsOut.CopyLayer(ly,name,['SPATIAL_INDEX=no','PRECISION=NO','GEOM_TYPE=geometry', 'GEOMETRY_NAME=the_geom', 'LAUNDER=yes'])
 
 
             return [True]
 
         # Wir geben die Exception auch mit zurück - damit die fehlermeldung informativer ist!
         except Exception as e:
-            #print str(e)
+            print str(e)
             return [False,e]
 
 

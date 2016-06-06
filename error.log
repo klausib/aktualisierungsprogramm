@@ -1,0 +1,4 @@
+06.06.16-00:05 ERROR ---------Log SQLITE----------
+06.06.16-00:05 ERROR ---------Log Postgres----------
+06.06.16-00:18 ERROR Fehler beim Kopieren des Datensatzes - 5091 \\vnvbrwfs2v2.net.vlr.gv.at\vogis_datenaktualisierung\_Allg\Uebergabe\UI\Geodaten\Wasser\Fluesse\Vlbg\Strukturzustand/oekomorphdaten_routen_fgw2012.shp 1664 - Features fehlen
+06.06.16-00:19 ERROR ---------Log Filesystem----------

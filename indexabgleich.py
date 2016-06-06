@@ -8,7 +8,7 @@ from dbfpy.dbf import *
 from xml.dom.minidom import *
 
 class indexabgleich():
-    def __init__(self,lyrIn,dsIn,lyrOut,dsOut,neu = True):
+    def __init__(self,lyrIn,dsIn,lyrOut,dsOut, schema = 'public', neu = True):
 
         #instanzvariablen
         self.lyrOut = lyrOut
@@ -16,6 +16,7 @@ class indexabgleich():
         self.dsIn = dsIn
         self.dsOut = dsOut
         self.neu = neu
+        self.schema = schema
 
 
 
@@ -39,8 +40,8 @@ class indexabgleich():
             #es sich um einen Geometrie Layer handelt wird dieser IMMER angelegt
             #ohne zu fragen, egal ob Datensatz neu oder nur Aktualisierung
             #####################################################################
-            if not (self.lyrIn.GetGeomType() == 100):     #100 beduetet geometrielos, dh. Eingangsdatensatz ist nur Tabelle
 
+            if not (self.lyrIn.GetGeomType() == 100):     #100 beduetet geometrielos, dh. Eingangsdatensatz ist nur Tabelle
                 #Shape
                 if self.dsOut.GetDriver().GetName() == "ESRI Shapefile":
                     #print str(self.dsOut())
@@ -50,13 +51,22 @@ class indexabgleich():
 
                 #Layer in Postgis
                 if self.dsOut.GetDriver().GetName() == "PostgreSQL":
+
                     geometriespalte = self.lyrOut.GetGeometryColumn()
-                    try:
-                        query ='create index idx_' + geometriespalte + '_' + self.lyrOut.GetName() + ' on ' + self.lyrOut.GetName() + ' using gist (' "\"" + geometriespalte + "\"" ')'
-                        self.dsOut.ExecuteSQL(query,None,"")  #Es gibt schon einen raeumlichen Index, der halt nicht passt es wird 0 (String) zurückgegeben
-                    except:
+
+                    # die query schaut nach, ob ein Index auf das Geometriefeld besteht
+                    query = 'select * from pg_indexes where tablename = \'' + self.lyrOut.GetName() + '\' and schemaname = \'' + self.schema + '\' and indexdef like \'%'  + geometriespalte + '%\''
+                    erg = self.dsOut.ExecuteSQL(query)
+                    recs = erg.GetFeatureCount()  # Gibt ein Layer Objekt zurück, dass die Anzahl der Records enthält
+
+                    if not (recs > 0):  #Indexeintrag wird gefunden, wenn recs > 0 d.h. es gibt einen Index auf Geometriespalte (= räuml. Index)
+                        #print 'Index POSTGIS fehlt'
+                        query ='create index idx_' + geometriespalte + '_' + self.lyrOut.GetName() + ' on ' + self.schema + '.' + self.lyrOut.GetName() + ' using gist (' "\"" + geometriespalte + "\"" ')'
+                        self.dsOut.ExecuteSQL(query)  #Es gibt schon einen raeumlichen Index, der halt nicht passt es wird 0 (String) zurückgegeben
+
+                    else:
                         #print 'Index POSTGIS vorhanden'
-                        query = 'reindex table ' + self.lyrOut.GetName()
+                        query = 'reindex table '  + self.schema + '.' +  self.lyrOut.GetName()
                         self.dsOut.ExecuteSQL(query)
 
                 #Spatialite
@@ -139,8 +149,7 @@ class indexabgleich():
                     #Der Ziellayer ist Postgis
                     elif self.dsOut.GetDriver().GetName() == "PostgreSQL":
                         for indi in idx:
-                            query = str('create index idx_' + indi + '_' + self.lyrOut.GetName() + ' on ' + self.lyrOut.GetName() + ' using btree (' "\"" + indi + "\"" ')') #ACHTUNG: Gross Kleinschreibung bei postgres!
-
+                            query = str('create index idx_' + indi + '_' + self.lyrOut.GetName() + ' on ' + self.schema + '.' + self.lyrOut.GetName() + ' using btree (' "\"" + indi + "\"" ')') #ACHTUNG: Gross Kleinschreibung bei postgres!
                             self.dsOut.ExecuteSQL(query)
 
 
@@ -188,16 +197,20 @@ class indexabgleich():
 
 
 
-                if self.dsOut.GetDriver().GetName() == "PostgreSQL": #Postgres
-                    if not (self.dsOut.ExecuteSQL('select * from pg_indexes where tablename = \''   + self.lyrOut.GetName() + '\'') == None):   #Hier werden die Indices dokumentiert
-                                                                                                                                                #Findet die query nichts ist das Objekt None
+                if self.dsOut.GetDriver().GetName() == "PostgreSQL":    # Postgres - ACHTUNG: OGR gibt bei geometrielosen Tabellen None bei GEt FeatureCoutn zurück
+                                                                        # deshalb immer reindex!
+                    query = 'select * from pg_indexes where tablename = \''   + self.lyrOut.GetName() + '\' and schemaname = \''   + self.schema + '\''   #Hier werden die Indices dokumentiert
+                    erg = self.dsOut.ExecuteSQL(query)
+                    #print str(erg.GetFeatureCount())
+                    if erg.GetFeatureCount > 0:
+                        #print 'dort'                                                                                                                                                #Findet die query nichts ist das Objekt None
                         FlaggeOut = True        #Ausgangstabelle hat Index
                     else:
                         FlaggeOut = False
 
 
                 if self.dsOut.GetDriver().GetName() == "SQLite": #SQLIT
-                    if not (self.dsOut.ExecuteSQL('pragma index_list (' + self.lyrOut.GetName() + ')') == None):    #Hier werden die Indices dokumentiert
+                    if self.dsOut.ExecuteSQL('pragma index_list (' + self.lyrOut.GetName() + ')').GetFeatureCount() > 0:    #Hier werden die Indices dokumentiert
                                                                                                                     #Findet die query nichts ist das Objekt None
                         FlaggeOut = True        #Ausgangstabelle hat Index
                     else:
@@ -258,7 +271,7 @@ class indexabgleich():
                 #diesen anzulegen
                 elif self.dsOut.GetDriver().GetName() == "PostgreSQL":    #Wenn Index auf DB gilt dieser
                     if FlaggeOut:
-                        query = 'reindex table ' + self.lyrOut.GetName()
+                        query = 'reindex table ' + self.schema + '.' + self.lyrOut.GetName()
                         self.dsOut.ExecuteSQL(query)
                     else:
                         return 3
@@ -267,6 +280,7 @@ class indexabgleich():
             #Alles in Ordnung!!
             return 1
 
-        except:
+        except Exception as e:
+            print str(e)
 
             return 4    #komplett danebengegangen
