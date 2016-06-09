@@ -44,11 +44,11 @@ class Vergleich():
                     #die Reihenfolge der Attribute ist zwar egal, aber das Attributfeld
                     #muss auch im neuen datensatz gefunden werden
                     index_o = self.featDefIn.GetFieldIndex(defOut.GetNameRef())
+
                     #print str(defOut.GetNameRef()) + ' --- ' + str(self.lyrIn.GetName()) + ' ---' + self.lyrOut.GetName() + ' ----- ' + defOut.GetNameRef()
                     if index_o < 0: #schon mal schlecht, wird nicht gefunden
-                        return "Feldnamen fehlen: Eingansname: ".decode('utf8') + ' ' + defIn.GetNameRef() + ' Ausgangsname: ' + defOut.GetNameRef()
+                        return 'Fehler - Feldnamen fehlen:  Ausgangsname: ' + defOut.GetNameRef()
                     defIn = self.featDefIn.GetFieldDefn(index_o)
-
 
 
                     #Prüfung für Shapefiles
@@ -108,9 +108,11 @@ class Vergleich():
 
             else:
                 AttrFlag = ("Fehler: Feldanzahl zu gering")
+
             return AttrFlag
 
-        except:
+        except Exception as e:
+            print str(e)
             return "Fehler: Schwerer Fehler in Methode verglAttr"
 
 

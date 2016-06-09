@@ -1,3 +1,5 @@
-06.06.16-00:05 ERROR ---------Log SQLITE----------
-06.06.16-00:05 ERROR ---------Log Postgres----------
-06.06.16-00:19 ERROR ---------Log Filesystem----------
+09.06.16-11:41 ERROR ---------Log SQLITE----------
+09.06.16-11:41 ERROR ---------Log Postgres----------
+09.06.16-11:41 ERROR ---------Log Filesystem----------
+09.06.16-11:41 ERROR ------------------------------------------------------------------------
+09.06.16-11:41 ERROR Fehler beim Loeschen des Datensatzes  - \\vnvbrwfs2v2.net.vlr.gv.at\vogis_datenaktualisierung\_Allg\Uebergabe\VIIa\Geodaten\mountainbike/mountainbike_strecken.shp

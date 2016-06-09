@@ -1,6 +1,3 @@
-06.06.16-00:05 ---------Log SQLITE----------
-06.06.16-00:05 ---------Log Postgres----------
-06.06.16-00:19 ---------Log Filesystem----------
-06.06.16-00:24 Fehler beim Vergleichen der Attribute - 4019 \\vnvbrwfs2v2.net.vlr.gv.at\vogis_datenaktualisierung\_Allg\Uebergabe\UI\Geodaten\Wasser\Fluesse\Vlbg\Strukturzustand/direkteinleitungen_fgw2012.shp Fehler Feldtyp:Real = Integer64 ROURIX
-06.06.16-00:24 Fehler beim Vergleichen der Attribute - 4020 \\vnvbrwfs2v2.net.vlr.gv.at\vogis_datenaktualisierung\_Allg\Uebergabe\UI\Geodaten\Wasser\Fluesse\Vlbg\Strukturzustand/kontinuumsunterbrechungen_fgw2012.shp Fehler Feldtyp:Real = Integer64 ROURIX
-06.06.16-00:24 Fehler beim Vergleichen der Attribute - 4021 \\vnvbrwfs2v2.net.vlr.gv.at\vogis_datenaktualisierung\_Allg\Uebergabe\UI\Geodaten\Wasser\Fluesse\Vlbg\Strukturzustand/oekomorphdaten_routen_fgw2012.shp Fehler Feldtyp:Real = Integer64 ROURIX
+09.06.16-11:41 ---------Log SQLITE----------
+09.06.16-11:41 ---------Log Postgres----------
+09.06.16-11:41 ---------Log Filesystem----------

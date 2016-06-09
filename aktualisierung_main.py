@@ -871,12 +871,14 @@ try:
     for pfad in loeschliste_tmp:
         if  (pfad.find('.shp') > -1):
             if not hilfsmodul.shapeLoeschen(str(os.path.dirname(pfad)),str(os.path.basename(pfad)).replace('.shp','')):
+                logroutine(log_warning,'-------------------------------------------------------------------------------------\r' ,False)
                 logroutine(log_warning,"Fehler beim Loeschen des Datensatzes  - " + pfad +'\r' ,False)
-                logroutine(log_ok, "Aktualisieren erfolgreich - loeschen fehlgeschlagen - " + pfad +'\r' ,False)
+                #logroutine(log_ok, "Aktualisieren erfolgreich - loeschen fehlgeschlagen - " + pfad +'\r' ,False)
         else:
             if not hilfsmodul.dateiLoeschen(str(os.path.dirname(pfad)),str(os.path.basename(pfad))):
+                logroutine(log_warning,'-------------------------------------------------------------------------------------\r' ,False)
                 logroutine(log_warning,"Fehler beim Loeschen des Datensatzes - " + pfad +'\r' ,False)
-                logroutine(log_ok, "Aktualisieren erfolgreich - loeschen fehlgeschlagen - " + pfad +'\r' ,False)
+                #logroutine(log_ok, "Aktualisieren erfolgreich - loeschen fehlgeschlagen - " + pfad +'\r' ,False)
 
     # Abschlussnachricht
     logroutine(log_ok, 'Aktualisierungprozess Ende' ,False)
