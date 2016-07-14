@@ -282,7 +282,7 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                 #Püfen ob auch wirklich alle Feature übernommen wurden
                 diff = lyrIn.GetFeatureCount() != sqliteOut.GetLayerByName(outputname_ohnesuffix).GetFeatureCount()
                 if abs(diff) > 0:
-                    print str(lyrIn.GetFeatureCount()) + ' ' + str(sqliteOut.GetLayerByName(outputname_ohnesuffix).GetFeatureCount())
+                    #print str(lyrIn.GetFeatureCount()) + ' ' + str(sqliteOut.GetLayerByName(outputname_ohnesuffix).GetFeatureCount())
                     logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' '+ str(abs(diff)) + ' - Features fehlen' + '\r' ,False)
                     #errorliste.append(inputpfad + '/' + inputname)
                     errorliste.append(inputpfad + '/' + outputname)
@@ -304,6 +304,16 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
 
                     continue    #Stop: Ab zum nächsten Datensatz
 
+                 #die Geometriespalte finden!
+                geometriespalte = ''
+                geometriespalte = sqliteOut.GetLayerByName(outputname_ohnesuffix).GetGeometryColumn()  #gibt die geometriespalte zurück oder ''
+                if not geometriespalte == '':   #wenn es keine gibt ist die variable ''
+                    #Extent beides probieren, passiert nichts wenn eine SQl nicht ausgeführt werden kann
+                    print 'Geometrie'
+                    query =    "update geometry_columns_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where f_table_name = '" + outputname_ohnesuffix + "'"
+                    sqliteOut.ExecuteSQL(query)
+                    query =    "update layer_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where table_name = '" + outputname_ohnesuffix + "'"
+                    sqliteOut.ExecuteSQL(query)
 
 
                 #SPATIALITE Index aktualisieren:
@@ -432,7 +442,7 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
 ##                # temp Tabelle erfolgreich übertragen
                 try:
                     #Püfen ob auch wirklich alle Feature übernommen wurden
-                    diff = lyrIn.GetFeatureCount() != sqliteOut.GetLayerByName(outputname_ohnesuffix + "_temp_aktual").GetFeatureCount()
+                    diff = lyrIn.GetFeatureCount() - sqliteOut.GetLayerByName(outputname_ohnesuffix + "_temp_aktual").GetFeatureCount()
                     if abs(diff) > 0:
                         logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(abs(diff)) + ' - Features fehlen' + '\r' ,False)
                         #errorliste.append(inputpfad + '/' + inputname)
@@ -449,6 +459,8 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                     geometriespalte = ''
                     geometriespalte = lyrSqliteOut.GetGeometryColumn()  #gibt die geometriespalte zurück oder ''
 
+
+
                     # Transaction Block beginnen
                     sqliteOut.StartTransaction()
 
@@ -460,18 +472,31 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                     sqliteOut.ExecuteSQL(query)
 
                     if not geometriespalte == '':   #wenn es keine gibt ist die variable ''
-                        #query =    "DELETE from " + outputname_ohnesuffix + ";delete from sqlite_sequence where name =\'" + outputname_ohnesuffix + "\'; insert into " + outputname_ohnesuffix  + " (" + geometriespalte + "," + Attributliste  + " ) select " +  geometriespalte   + "," + Attributliste + " from " + outputname_ohnesuffix + "_temp_aktual;"
-                        query =    "insert into " + outputname_ohnesuffix  + " (" + geometriespalte + "," + Attributliste  + " ) select " +  geometriespalte   + "," + Attributliste + " from " + outputname_ohnesuffix + "_temp_aktual;"
+                        query =    "insert into " + outputname_ohnesuffix + " (" + geometriespalte + "," + Attributliste  + " ) select " +  geometriespalte   + "," + Attributliste + " from " + outputname_ohnesuffix + "_temp_aktual"
                         sqliteOut.ExecuteSQL(query)
+                        #Extent beides probieren, passiert nichts wenn eine SQl nicht ausgeführt werden kann
+                        query =    "update geometry_columns_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where f_table_name = '" + outputname_ohnesuffix + "'"
+                        sqliteOut.ExecuteSQL(query)
+                        query =    "update layer_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where table_name = '" + outputname_ohnesuffix + "'"
+                        sqliteOut.ExecuteSQL(query)
+
                     else:
-                        query =    "DELETE from " + outputname_ohnesuffix + " insert into " + outputname_ohnesuffix + " (" + Attributliste + " ) select " +  Attributliste + " from " + outputname_ohnesuffix + "_temp_aktual"
+                        query =    "insert into " + outputname_ohnesuffix + " (" + Attributliste + " ) select " +  Attributliste + " from " + outputname_ohnesuffix + "_temp_aktual"
                         sqliteOut.ExecuteSQL(query)
+
+
+
 
                     # Wurden alle features übertragen?
                     query =    "select * from " + outputname_ohnesuffix
-                    fe1 = sqliteOut.ExecuteSQL(query).GetFeatureCount()
+                    ly1 = sqliteOut.ExecuteSQL(query)
+                    fe1 = ly1.GetFeatureCount()
                     query =    "select * from " + outputname_ohnesuffix + "_temp_aktual"
-                    fe2 = sqliteOut.ExecuteSQL(query).GetFeatureCount()
+                    ly2 = sqliteOut.ExecuteSQL(query)
+                    fe2 = ly2.GetFeatureCount()
+                    # WICHTIG: Sonst funktionieren die Lösche Querys auf die Layer (=Tabellen9 NICHT!!
+                    sqliteOut.ReleaseResultSet(ly1)
+                    sqliteOut.ReleaseResultSet(ly2)
 
                     # Transaktion abschliessen oder eben nicht
                     if fe1 == fe2: # Alles OK
@@ -482,19 +507,28 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                         #logroutine(log_warning,"Insert Fehler in der Spatiallite DB " + str(row["primindex"]) + " "  + inputpfad + '/' + outputname + ': Temp TAbelle wurde umbenannt!\r' ,False)
 
 
-                    query =    "drop table " + outputname_ohnesuffix + "_temp_aktual"
+
+                    query =    "DROP TABLE " + outputname_ohnesuffix + "_temp_aktual"
                     sqliteOut.ExecuteSQL(query)
+
+
 
                     #löschen des Geometrieeintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
                     query =    "delete from geometry_columns where f_table_name = '" + outputname_ohnesuffix + "_temp_aktual'"
                     sqliteOut.ExecuteSQL(query)
+
+                    #löschen des Statistics Eintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
+                    query =    "delete from geometry_columns_statistics where f_table_name = '" + outputname_ohnesuffix + "_temp_aktual'"
+                    sqliteOut.ExecuteSQL(query)
+
+
 
                     #Alles OK, das Original kann in die Liste
                     #der zu löschenden Shapes aufgenommen werden
                     loeschliste.append(inputpfad + '/' + outputname)
 
                 except Exception as e:
-                    #print str(e)
+                    print str(e)
                     logroutine(log_error,"SQL Fehler in der Spatiallite DB " + str(row["primindex"]) + " "  + inputpfad + '/' + outputname + '\r' ,False)
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Abbrechen und weiter zum nächsten Datensatz
