@@ -1,5 +1,4 @@
-09.06.16-11:41 ERROR ---------Log SQLITE----------
-09.06.16-11:41 ERROR ---------Log Postgres----------
-09.06.16-11:41 ERROR ---------Log Filesystem----------
-09.06.16-11:41 ERROR ------------------------------------------------------------------------
-09.06.16-11:41 ERROR Fehler beim Loeschen des Datensatzes  - \\vnvbrwfs2v2.net.vlr.gv.at\vogis_datenaktualisierung\_Allg\Uebergabe\VIIa\Geodaten\mountainbike/mountainbike_strecken.shp
+22.09.16-12:05 ERROR ---------Log SQLITE----------
+22.09.16-12:05 ERROR ---------Log Postgres----------
+22.09.16-12:07 ERROR ---------Log Filesystem----------
+22.09.16-12:07 ERROR Fehler beim Umbenennen des original Shapes: - 4333 \\vnvbrwfs2v2.net.vlr.gv.at\vogis_datenaktualisierung\_Allg\Uebergabe\VIIb\Geodaten\Verkehr\Strassen\Vlbg\hoeherrangige_strasse/landstrasse.shp

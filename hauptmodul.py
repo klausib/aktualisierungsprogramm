@@ -6,6 +6,7 @@
 ##sys.path.append('C:/Program Files/QGIS Wien/apps/Python27/Lib/site-packages')
 from osgeo import ogr, osr,gdal
 import shutil, os, glob, string, sys
+from delme import *
 
 
 
@@ -22,7 +23,7 @@ class Vergleich():
             self.featDefIn = self.lyrIn.GetLayerDefn()
 
 
-
+        self.depp = None
 
     ##################################################################
     #Bei Tabellen und Geodatensätzen wird deren Aufbau
@@ -121,6 +122,7 @@ class Vergleich():
     #Haben Ein- und Ausgang den gleichen Geometrietyp
     def verglGeom(self):
 
+
         if (self.lyrIn.GetGeomType() == self.lyrOut.GetGeomType()):
             return 'OK'
         #fall point/multipoint
@@ -139,6 +141,22 @@ class Vergleich():
         elif self.lyrIn.GetGeomType() == 6 and self.lyrOut.GetGeomType() == 3:
             return 'OK'
 
+        #fall point/multipoint mit M
+        elif self.lyrIn.GetGeomType() == ogr.wkbPointM and self.lyrOut.GetGeomType() == ogr.wkbMultiPointM:
+            return 'OK'
+        elif self.lyrIn.GetGeomType() == ogr.wkbMultiPointM and self.lyrOut.GetGeomType() == ogr.wkbPointM:
+            return 'OK'
+        #fall line/multiline 3D
+        elif self.lyrIn.GetGeomType() == ogr.wkbLineStringM and self.lyrOut.GetGeomType() == ogr.wkbMultiLineStringM:
+            return 'OK'
+        elif self.lyrIn.GetGeomType() == ogr.wkbMultiLineStringM and self.lyrOut.GetGeomType() == ogr.wkbLineStringM:
+            return 'OK'
+        #fall polygon/multipolygon 3D
+        elif self.lyrIn.GetGeomType() == ogr.wkbPolygonM and self.lyrOut.GetGeomType() == ogr.wkbMultiPolygonM:
+            return 'OK'
+        elif self.lyrIn.GetGeomType() == ogr.wkbMultiPolygonM and self.lyrOut.GetGeomType() == ogr.wkbPolygonM:
+            return 'OK'
+
         #fall point/multipoint 3D
         elif self.lyrIn.GetGeomType() == ogr.wkbPoint25D and self.lyrOut.GetGeomType() == ogr.wkbMultiPoint25D:
             return 'OK'
@@ -153,6 +171,22 @@ class Vergleich():
         elif self.lyrIn.GetGeomType() == ogr.wkbPolygon25D and self.lyrOut.GetGeomType() == ogr.wkbMultiPolygon25D:
             return 'OK'
         elif self.lyrIn.GetGeomType() == ogr.wkbMultiPolygon25D and self.lyrOut.GetGeomType() == ogr.wkbPolygon25D:
+            return 'OK'
+
+        #fall point/multipoint 3D mit M
+        elif self.lyrIn.GetGeomType() == ogr.wkbPointZM and self.lyrOut.GetGeomType() == ogr.wkbMultiPointZM:
+            return 'OK'
+        elif self.lyrIn.GetGeomType() == ogr.wkbMultiPointZM and self.lyrOut.GetGeomType() == ogr.wkbPointZM:
+            return 'OK'
+        #fall line/multiline 3D
+        elif self.lyrIn.GetGeomType() == ogr.wkbLineStringZM and self.lyrOut.GetGeomType() == ogr.wkbMultiLineStringZM:
+            return 'OK'
+        elif self.lyrIn.GetGeomType() == ogr.wkbMultiLineStringZM and self.lyrOut.GetGeomType() == ogr.wkbLineStringZM:
+            return 'OK'
+        #fall polygon/multipolygon 3D
+        elif self.lyrIn.GetGeomType() == ogr.wkbPolygonZM and self.lyrOut.GetGeomType() == ogr.wkbMultiPolygonZM:
+            return 'OK'
+        elif self.lyrIn.GetGeomType() == ogr.wkbMultiPolygonZM and self.lyrOut.GetGeomType() == ogr.wkbPolygonZM:
             return 'OK'
         else:
             return 'Fehler'
@@ -299,7 +333,7 @@ class Vergleich():
             #srs = osr.SpatialReference()
             #srs.ImportFromEPSG( 31254 )
 
-
+            ly = None   # unser zukünftiges Layerobjekt
             # lyrIn (das Eingangsshape) hat bereits eine SRS (original oder vom kopierprogramm vorher zugewiesen)
             # im Modul verglRef überprüft un bei Bedarf neu zugewiesen!
             srs = lyrIn.GetSpatialRef()
@@ -469,321 +503,225 @@ class Vergleich():
                             ly.CreateFeature(fea_tmp)
 
 
-                    #Point oder Multipoint
-                    elif lyrIn.GetGeomType() == 1 or lyrIn.GetGeomType() == 4:
+                     #########################################
+                    # Alle Formen von Punktgeometrien
+                    #########################################
 
+                    #Point oder Multipoint
+                    elif lyrIn.GetGeomType() == ogr.wkbPoint or lyrIn.GetGeomType() == ogr.wkbMultiPoint:
 
                         ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPoint)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPoint,'point', lyrIn,codierung,ly):
+                            ly = None
 
-                        i = 0
-                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-                        while i < feldanzahl:
-                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-                            Fdefn.SetName(string.lower(Fdefn.GetName()))
-                            ly.CreateField(Fdefn)
-                            i = i+1
+                    #Point oder Multipoint mit M
+                    elif lyrIn.GetGeomType() == ogr.wkbPointM or lyrIn.GetGeomType() == ogr.wkbMultiPointM:
 
-                        # Der gesmate Layer muss neu geschrieben werden
-                        # damit Probleme beim Laden in die Datenbank
-                        # möglichst ausgeschlossen werden
-                        for fea in lyrIn:
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPointM)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPointM,'point', lyrIn,codierung,ly):
+                            ly = None
 
-                            # Umwandeln der Geometrie in Multipoint
-                            gemi = fea.GetGeometryRef()
-                            gemi = ogr.ForceToMultiPoint(gemi)
+                    #Point oder Multipoint 3D mit M
+                    elif lyrIn.GetGeomType() == ogr.wkbPointZM or lyrIn.GetGeomType() == ogr.wkbMultiPointZM:
 
-                            fea_tmp = ogr.Feature(fea.GetDefnRef())
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPointZM)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPointZM,'point', lyrIn,codierung,ly):
+                            ly = None
 
-                            # gemoetrie einfügen (die geänderte)
-                            fea_tmp.SetGeometry(gemi)
-
-                            # sachinformation einfügen
-
-                            i = 0
-                            while i < feldanzahl:
-                                if not fea.GetField(i) == None:
-
-                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
-                                            if codierung == 'nein' or '':
-                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
-                                            else:   # bei Bedarf umcodieren
-                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
-                                                fea_tmp.SetField(i,kasperle)
-                                    else:   # numerisches Feld
-                                        fea_tmp.SetField(i,fea.GetField(i))
-                                i = i+1
-
-
-                            # ein neues (konvertiertes) Feature im Memory Layer erzeugen
-                            fea_tmp.SetFID(-1)
-                            ly.CreateFeature(fea_tmp)
-
-
-
-
-                    #Line oder Multiline
-                    elif lyrIn.GetGeomType() == 2 or lyrIn.GetGeomType() == 5:
-
-
-                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiLineString)
-
-                        i = 0
-                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-                        while i < feldanzahl:
-                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-                            Fdefn.SetName(string.lower(Fdefn.GetName()))
-                            ly.CreateField(Fdefn)
-                            i = i+1
-
-                        # Der gesmate Layer muss neu geschrieben werden
-                        # damit Probleme beim Laden in die Datenbank
-                        # möglichst ausgeschlossen werden
-                        err = 0
-                        for fea in lyrIn:
-
-                            # Umwandeln der Geometrie in Multilinestring
-                            gemi = fea.GetGeometryRef()
-                            gemi = ogr.ForceToMultiLineString(gemi)
-
-                            fea_tmp = ogr.Feature(fea.GetDefnRef())
-
-                            # gemoetrie einfügen (die geänderte)
-                            fea_tmp.SetGeometry(gemi)
-
-                            # sachinformation einfügen
-
-                            i = 0
-                            while i < feldanzahl:
-                                if not fea.GetField(i) == None:
-
-                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
-                                            if codierung == 'nein' or '':
-                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
-                                            else:   # bei Bedarf umcodieren
-                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
-                                                fea_tmp.SetField(i,kasperle)
-                                    else:   # numerisches Feld
-                                        fea_tmp.SetField(i,fea.GetField(i))
-                                i = i+1
-
-
-                            # ein neues (konvertiertes) Feature im Memory Layer erzeugen
-                            fea_tmp.SetFID(-1)
-                            ly.CreateFeature(fea_tmp)
-
-
-
-
-                    #Polygon oder Multipolygon
-                    elif lyrIn.GetGeomType() == 3 or lyrIn.GetGeomType() == 6:
-
-                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPolygon)
-
-                        i = 0
-                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-                        while i < feldanzahl:
-                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-                            Fdefn.SetName(string.lower(Fdefn.GetName()))
-                            ly.CreateField(Fdefn)
-                            i = i+1
-
-                        # Der gesmate Layer muss neu geschrieben werden
-                        # damit Probleme beim Laden in die Datenbank
-                        # möglichst ausgeschlossen werden
-                        for fea in lyrIn:
-
-                            # Umwandeln der Geometrie in ein Multipolygon
-                            gemi = fea.GetGeometryRef()
-                            gemi = ogr.ForceToMultiPolygon(gemi)
-
-                            fea_tmp = ogr.Feature(fea.GetDefnRef())
-
-                            # gemoetrie einfügen (die geänderte)
-                            fea_tmp.SetGeometry(gemi)
-
-                            # sachinformation einfügen
-
-                            i = 0
-                            while i < feldanzahl:
-                                if not fea.GetField(i) == None:
-
-                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
-                                            if codierung == 'nein' or '':
-                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
-                                            else:   # bei Bedarf umcodieren
-                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
-                                                fea_tmp.SetField(i,kasperle)
-                                    else:   # numerisches Feld
-                                        fea_tmp.SetField(i,fea.GetField(i))
-                                i = i+1
-
-
-                            # ein neues (konvertiertes) Feature im Memory Layer erzeugen
-                            fea_tmp.SetFID(-1)
-                            ly.CreateFeature(fea_tmp)
-
-
-
-                    # Punkte mit 3D
-                    elif lyrIn.GetGeomType() == ogr.wkbMultiPoint25D   or lyrIn.GetGeomType() == ogr.wkbPoint25D  :
-
+                    #Point oder Multipoint 3D
+                    elif lyrIn.GetGeomType() == ogr.wkbPoint25D or lyrIn.GetGeomType() == ogr.wkbMultiPoint25D:
 
                         ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPoint25D)
-
-                        i = 0
-                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-                        while i < feldanzahl:
-                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-                            Fdefn.SetName(string.lower(Fdefn.GetName()))
-                            ly.CreateField(Fdefn)
-                            i = i+1
-
-                        # Der gesmate Layer muss neu geschrieben werden
-                        # damit Probleme beim Laden in die Datenbank
-                        # möglichst ausgeschlossen werden
-                        for fea in lyrIn:
-
-                            # Umwandeln der Geometrie in ein MultiLinestring
-                            gemi = fea.GetGeometryRef()
-                            gemi = ogr.ForceToMultiPoint(gemi)
-
-                            fea_tmp = ogr.Feature(fea.GetDefnRef())
-
-                            # gemoetrie einfügen (die geänderte)
-                            fea_tmp.SetGeometry(gemi)
-
-                            # sachinformation einfügen
-
-                            i = 0
-                            while i < feldanzahl:
-                                if not fea.GetField(i) == None:
-
-                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
-                                            if codierung == 'nein' or '':
-                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
-                                            else:   # bei Bedarf umcodieren
-                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
-                                                fea_tmp.SetField(i,kasperle)
-                                    else:   # numerisches Feld
-                                        fea_tmp.SetField(i,fea.GetField(i))
-                                i = i+1
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPoint25D,'point', lyrIn,codierung,ly):
+                            ly = None
 
 
-                            # ein neues (konvertiertes) Feature im Memory Layer erzeugen
-                            fea_tmp.SetFID(-1)
-                            ly.CreateFeature(fea_tmp)
 
+
+                    #########################################
+                    # Alle Formen von Liniengeometrien
+                    #########################################
+
+                    # Line oder Multiline
+                    elif lyrIn.GetGeomType() == ogr.wkbLineString or lyrIn.GetGeomType() == ogr.wkbMultiLineString:
+
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiLineString)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiLineString,'line', lyrIn,codierung,ly):
+                            ly = None
+
+                    # Line oder Multiline mit M
+                    elif lyrIn.GetGeomType() == ogr.wkbLineStringM or lyrIn.GetGeomType() == ogr.wkbMultiLineStringM:
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiLineStringM)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not self.__create_and_populate_layer(name, srs, ogr.wkbMultiLineStringM,'line', lyrIn,codierung,ly):
+                            ly = None
+
+                    # Line oder Multiline 3D mit M
+                    elif lyrIn.GetGeomType() == ogr.wkbLineStringZM or lyrIn.GetGeomType() == ogr.wkbMultiLineStringZM:
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiLineStringZM)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiLineStringZM,'line', lyrIn,codierung,ly):
+                            ly = None
 
                     # Linien mit 3D
                     elif lyrIn.GetGeomType() == ogr.wkbMultiLineString25D  or lyrIn.GetGeomType() == ogr.wkbLineString25D :
 
 
                         ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiLineString25D)
-
-                        i = 0
-                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-                        while i < feldanzahl:
-                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-                            Fdefn.SetName(string.lower(Fdefn.GetName()))
-                            ly.CreateField(Fdefn)
-                            i = i+1
-
-                        # Der gesmate Layer muss neu geschrieben werden
-                        # damit Probleme beim Laden in die Datenbank
-                        # möglichst ausgeschlossen werden
-                        for fea in lyrIn:
-
-                            # Umwandeln der Geometrie in ein MultiLinestring
-                            gemi = fea.GetGeometryRef()
-                            gemi = ogr.ForceToMultiLineString(gemi)
-
-                            fea_tmp = ogr.Feature(fea.GetDefnRef())
-
-                            # gemoetrie einfügen (die geänderte)
-                            fea_tmp.SetGeometry(gemi)
-
-                             # sachinformation einfügen
-
-                            i = 0
-                            while i < feldanzahl:
-                                if not fea.GetField(i) == None:
-
-                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
-                                            if codierung == 'nein' or '':
-                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
-                                            else:   # bei Bedarf umcodieren
-                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
-                                                fea_tmp.SetField(i,kasperle)
-                                    else:   # numerisches Feld
-                                        fea_tmp.SetField(i,fea.GetField(i))
-                                i = i+1
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiLineString25D,'line', lyrIn,codierung,ly):
+                            ly = None
 
 
-                            # ein neues (konvertiertes) Feature im Memory Layer erzeugen
-                            fea_tmp.SetFID(-1)
-                            ly.CreateFeature(fea_tmp)
+                    #########################################
+                    # Alle Formen von Polygongeometrien
+                    #########################################
 
+                    #Polygon oder Multipolygon
+                    elif lyrIn.GetGeomType() == ogr. wkbPolygon or lyrIn.GetGeomType() == ogr.wkbMultiPolygon:
+
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPolygon)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPolygon,'polygon', lyrIn,codierung,ly):
+                            ly = None
+
+                    #Polygon oder Multipolygon mit M
+                    elif lyrIn.GetGeomType() == ogr. wkbPolygonM or lyrIn.GetGeomType() == ogr.wkbMultiPolygonM:
+
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPolygonM)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPolygonM,'polygon', lyrIn,codierung,ly):
+                            ly = None
+
+                    #Polygon oder Multipolygon 3D mit M
+                    elif lyrIn.GetGeomType() == ogr. wkbPolygonZM or lyrIn.GetGeomType() == ogr.wkbMultiPolygonZM:
+
+                        ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPolygonZM)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPolygonZM,'polygon', lyrIn,codierung,ly):
+                            ly = None
 
                     # Polygone mit 3D
                     elif lyrIn.GetGeomType() == ogr.wkbMultiPolygon25D  or lyrIn.GetGeomType() == ogr.wkbPolygon25D :
 
-
                         ly = mem_ds.CreateLayer(name,srs,ogr.wkbMultiPolygon25D)
+                        # ACHTUNG: return hat mit dem im sub erzeugten Layer Objekt nicht funktioniert (crash)
+                        # dh wird das Lyerobjekt ly bereits vorher erzeugt und im Sub (Pointer!) verändert.
+                        # zurückgegeben wird nur das fehlerstatement
+                        if not  self.__create_and_populate_layer(name, srs, ogr.wkbMultiPolygon25D,'polygon', lyrIn,codierung,ly):
+                            ly = None
 
-                        i = 0
-                        feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
-                        while i < feldanzahl:
-                            Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
-                            Fdefn.SetName(string.lower(Fdefn.GetName()))
-                            ly.CreateField(Fdefn)
-                            i = i+1
-
-                        # Der gesmate Layer muss neu geschrieben werden
-                        # damit Probleme beim Laden in die Datenbank
-                        # möglichst ausgeschlossen werden
-                        for fea in lyrIn:
-
-                            # Umwandeln der Geometrie in ein MultiLinestring
-                            gemi = fea.GetGeometryRef()
-                            gemi = ogr.ForceToMultiPolygon(gemi)
-
-                            fea_tmp = ogr.Feature(fea.GetDefnRef())
-
-                            # gemoetrie einfügen (die geänderte)
-                            fea_tmp.SetGeometry(gemi)
-
-                            # sachinformation einfügen
-
-                            i = 0
-                            while i < feldanzahl:
-                                if not fea.GetField(i) == None:
-
-                                    if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
-                                            if codierung == 'nein' or '':
-                                                fea_tmp.SetField(i,fea.GetFieldAsString(i))
-                                            else:   # bei Bedarf umcodieren
-                                                kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
-                                                fea_tmp.SetField(i,kasperle)
-                                    else:   # numerisches Feld
-                                        fea_tmp.SetField(i,fea.GetField(i))
-                                i = i+1
-
-
-                            # ein neues (konvertiertes) Feature im Memory Layer erzeugen
-                            fea_tmp.SetFID(-1)
-                            ly.CreateFeature(fea_tmp)
+                    # alles andere
+                    else:
+                        dsOut.CopyLayer(lyrIn,name,['SPATIAL_INDEX=no','PRECISION=NO','GEOM_TYPE=geometry', 'GEOMETRY_NAME=the_geom', 'LAUNDER=yes'])
 
 
                     # Fertig: der Memorylayer mit dem gesäuberten Inhalt des Shapes kann in die Datenbank kopiert werden
-                    #print str(ly.GetFeatureCount())
-                    dsOut.CopyLayer(ly,name,['SPATIAL_INDEX=no','PRECISION=NO','GEOM_TYPE=geometry', 'GEOMETRY_NAME=the_geom', 'LAUNDER=yes'])
-
+                    if not ly == None:
+                        dsOut.CopyLayer(ly,name,['SPATIAL_INDEX=no','PRECISION=NO','GEOM_TYPE=geometry', 'GEOMETRY_NAME=the_geom', 'LAUNDER=yes'])
+                    else:
+                        return [False,'Geometrietyp nicht unterstuetzt oder Layer Nachbesserung fehlgeschlagen']
 
             return [True]
+
+
 
         # Wir geben die Exception auch mit zurück - damit die fehlermeldung informativer ist!
         except Exception as e:
             print str(e)
             return [False,e]
+
+
+
+    #################################
+    # Der Postgis-Featureverwurstler...
+    #################################
+    def __create_and_populate_layer(self,name, srs, ogr_type, geom_type, lyrIn,codierung,ly_tmp):
+
+        try:
+            i = 0
+            feldanzahl = lyrIn.GetLayerDefn().GetFieldCount()
+            while i < feldanzahl:
+                Fdefn = lyrIn.GetLayerDefn().GetFieldDefn(i)
+                Fdefn.SetName(string.lower(Fdefn.GetName()))
+                ly_tmp.CreateField(Fdefn)
+                i = i+1
+
+            # Der gesmate Layer muss neu geschrieben werden
+            # damit Probleme beim Laden in die Datenbank
+            # möglichst ausgeschlossen werden
+            for fea in lyrIn:
+
+                # Umwandeln der Geometrie in ein MultiLinestring
+                gemi = fea.GetGeometryRef()
+
+                if geom_type == 'point':
+                    gemi = ogr.ForceToMultiPoint(gemi)
+                if geom_type == 'line':
+                    gemi = ogr.ForceToMultiLineString(gemi)
+                if geom_type == 'polygon':
+                    gemi = ogr.ForceToMultiPolygon(gemi)
+
+                fea_tmp = ogr.Feature(fea.GetDefnRef())
+
+                # gemoetrie einfügen (die geänderte)
+                fea_tmp.SetGeometry(gemi)
+
+                # sachinformation einfügen
+
+                i = 0
+                while i < feldanzahl:
+                    if not fea.GetField(i) == None:
+
+                        if fea.GetFieldDefnRef(i).GetType() == 4:   # Textfeld
+                                if codierung == 'nein' or '':
+                                    fea_tmp.SetField(i,fea.GetFieldAsString(i))
+                                else:   # bei Bedarf umcodieren
+                                    kasperle = fea.GetFieldAsString(i).decode(codierung,'replace').encode('utf8','replace')
+                                    fea_tmp.SetField(i,kasperle)
+                        else:   # numerisches Feld
+                            fea_tmp.SetField(i,fea.GetField(i))
+                    i = i+1
+
+
+                # ein neues (konvertiertes) Feature im Memory Layer erzeugen
+                fea_tmp.SetFID(-1)
+                ly_tmp.CreateFeature(fea_tmp)
+
+            #Layer erfolgreich erstellt
+            return True
+
+
+        # Layer nicht erfolgreich erstellt!
+        except:
+            return False
+
 
 
