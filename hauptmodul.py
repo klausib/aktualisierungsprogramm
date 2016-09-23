@@ -6,7 +6,7 @@
 ##sys.path.append('C:/Program Files/QGIS Wien/apps/Python27/Lib/site-packages')
 from osgeo import ogr, osr,gdal
 import shutil, os, glob, string, sys
-from delme import *
+
 
 
 
