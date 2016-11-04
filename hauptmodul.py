@@ -235,8 +235,8 @@ class Vergleich():
             #dadurch auch beim Kopierprozess den Ausgangsdaten in Datenbanken - nicht Shape)
             f = open (inputpfad + inputname + ".prj","w")
             # Die vogis Modifikation....
-            bezugssystem_txt = bezugssystem_txt.replace('MGI / Austria GK West','MGI_Austria_GK_West')
             bezugssystem_txt = bezugssystem_txt.replace('MGI','GCS_MGI')
+            bezugssystem_txt = bezugssystem_txt.replace('GCS_MGI / Austria GK West','MGI_Austria_GK_West')
             bezugssystem_txt = bezugssystem_txt.replace('Militar_Geographische_Institute','D_MGI')
             #print bezugssystem_txt
             f.write(bezugssystem_txt)
