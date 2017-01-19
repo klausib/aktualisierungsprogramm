@@ -487,7 +487,24 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                         postgisOut.ExecuteSQL(query)
                         continue    #Stop: Ab zum nächsten Datensatz
 
+                    # Der Datensatz ist bereits geprüft, Felder dürfen ja dazukommen
+                    # die müssen wir allerdings vorher auch dem original Datensatz hinzufügen
+                    # damit das Insert funktioniert
+                    temp_lyr = postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual"))
+                    bestand_lyr = postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix))
+                    if temp_lyr.GetLayerDefn().GetFieldCount > bestand_lyr.GetLayerDefn().GetFieldCount:
+                        index = 0
+                        while index < (temp_lyr.GetLayerDefn().GetFieldCount()):
+                            def_temp = temp_lyr.GetLayerDefn().GetFieldDefn(index)
+                            index_o = bestand_lyr.GetLayerDefn().GetFieldIndex(def_temp.GetNameRef())
+                            if index_o < 0: # Feld wurde im original Datensatz nicht gefunden -> muss angelegt werden
+                                            # das geht nur mit SQL (da der Originallyer blockiert ist vom aufrufenden Modul und CreateLayer nicht geht
+                                query = "select data_type from information_schema.columns where table_schema = '" + string.lower(schema) + "' and table_name = '" + string.lower(outputname_ohnesuffix) + "_temp_aktual" + "' and column_name = '" + string.lower(def_temp.GetName()) + "'"
+                                erg = postgisOut.ExecuteSQL(query).GetFeature(0).GetField(0) # Datentyp des Feldes, das hinzuzufügen ist
+                                query = "alter table " + string.lower(schema) + "." + string.lower(outputname_ohnesuffix) +  " add " + string.lower(def_temp.GetName()) + " " + erg
+                                postgisOut.ExecuteSQL(query)
 
+                            index = index + 1
 
 
                     if not geometriespalte == '':   # wenn es keine gibt ist die variable ''

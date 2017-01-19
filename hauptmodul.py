@@ -110,6 +110,8 @@ class Vergleich():
             else:
                 AttrFlag = ("Fehler: Feldanzahl zu gering")
 
+            self.featDefIn = None
+            self.featDefOut = None
             return AttrFlag
 
         except Exception as e:
@@ -408,7 +410,6 @@ class Vergleich():
 ##                        ly = dsOut.CopyLayer(lyrIn,name, ['SPATIAL_INDEX=no','PRECISION=no','GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
 ##                    elif driverName == "SQLite":
 ##                        ly = dsOut.CopyLayer(lyrIn,name, ['GEOMETRY_NAME=the_geom', 'LAUNDER=no'])
-
 
 
                 if driverName == "SQLite":

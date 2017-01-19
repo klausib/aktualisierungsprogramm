@@ -309,7 +309,6 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                 geometriespalte = sqliteOut.GetLayerByName(outputname_ohnesuffix).GetGeometryColumn()  #gibt die geometriespalte zurück oder ''
                 if not geometriespalte == '':   #wenn es keine gibt ist die variable ''
                     #Extent beides probieren, passiert nichts wenn eine SQl nicht ausgeführt werden kann
-                    print 'Geometrie'
                     query =    "update geometry_columns_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where f_table_name = '" + outputname_ohnesuffix + "'"
                     sqliteOut.ExecuteSQL(query)
                     query =    "update layer_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where table_name = '" + outputname_ohnesuffix + "'"
@@ -375,6 +374,7 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
             ###################################
             elif row["ds_neu"] == 'nein':
 
+
                 #Ein Vergleichsobjekt wird instanziert
                 #Es ist für kopieren, vergleich etc...
                 dShape = Vergleich(lyrIn,dsIn,lyrSqliteOut,sqliteOut)
@@ -418,6 +418,7 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                 # ACHTUNG: Die Gross/Kleinschreibung des Shapes orientiert sich an dem String outputname in
                 # der Steuertabelle: So wies dort drin ist wird der Shapename geschrieben
                 rueckgabe = dShape.kopieren(sqliteOut,lyrIn,outputname_ohnesuffix + '_temp_aktual',row["zieltyp"])
+
                 #if not dShape.kopieren(sqliteOut,lyrIn,outputname_ohnesuffix + '_temp_aktual',row["zieltyp"])[0]:   #outputname ist ja die sqlite Datei
                 if not rueckgabe[0]:   #outputname ist ja die sqlite Datei
                     logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(rueckgabe[1]) + '\r' ,False)
@@ -455,6 +456,32 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                         continue    #Stop: Ab zum nächsten Datensatz
                     # temp Tabelle erfolgreich übertragen
 
+
+                    # Der Datensatz ist bereits geprüft, Felder dürfen ja dazukommen
+                    # die müssen wir allerdings vorher auch dem original Datensatz hinzufügen
+                    # damit das Insert funktioniert
+                    temp_lyr = sqliteOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual"))
+                    bestand_lyr = sqliteOut.GetLayerByName(string.lower(outputname_ohnesuffix))
+                    if temp_lyr.GetLayerDefn().GetFieldCount > bestand_lyr.GetLayerDefn().GetFieldCount:
+                        index = 0
+                        while index < (temp_lyr.GetLayerDefn().GetFieldCount()):
+                            def_temp = temp_lyr.GetLayerDefn().GetFieldDefn(index)
+                            index_o = bestand_lyr.GetLayerDefn().GetFieldIndex(def_temp.GetNameRef())
+                            if index_o < 0: # Feld wurde im original Datensatz nicht gefunden -> muss angelegt werden
+                                            # das geht nur mit SQL (da der Originallyer blockiert ist vom aufrufenden Modul und CreateLayer nicht geht
+                                query = "pragma table_info(" + string.lower(outputname_ohnesuffix) + "_temp_aktual)"
+                                erg = sqliteOut.ExecuteSQL(query)
+                                if erg.GetFeature(index+1).GetFieldAsString('name') == def_temp.GetName():
+                                    query = "alter table " +  string.lower(outputname_ohnesuffix) +  " add " + string.lower(def_temp.GetName()) + " " + erg.GetFeature(index+1).GetFieldAsString('type')
+                                    sqliteOut.ExecuteSQL(query)
+
+                            index = index + 1
+
+
+
+
+
+
                     #die Geometriespalte finden!
                     geometriespalte = ''
                     geometriespalte = lyrSqliteOut.GetGeometryColumn()  #gibt die geometriespalte zurück oder ''
@@ -468,16 +495,16 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                     sqliteOut.ExecuteSQL(query)
 
                     # Autoincrement zurücksetzen
-                    query =    "delete from sqlite_sequence where name=\'" + outputname_ohnesuffix + "\'"
+                    query =    "delete from sqlite_sequence where name=\'" + string.lower(outputname_ohnesuffix) + "\'"
                     sqliteOut.ExecuteSQL(query)
 
                     if not geometriespalte == '':   #wenn es keine gibt ist die variable ''
                         query =    "insert into " + outputname_ohnesuffix + " (" + geometriespalte + "," + Attributliste  + " ) select " +  geometriespalte   + "," + Attributliste + " from " + outputname_ohnesuffix + "_temp_aktual"
                         sqliteOut.ExecuteSQL(query)
                         #Extent beides probieren, passiert nichts wenn eine SQl nicht ausgeführt werden kann
-                        query =    "update geometry_columns_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where f_table_name = '" + outputname_ohnesuffix + "'"
+                        query =    "update geometry_columns_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where f_table_name = '" + string.lower(outputname_ohnesuffix) + "'"
                         sqliteOut.ExecuteSQL(query)
-                        query =    "update layer_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where table_name = '" + outputname_ohnesuffix + "'"
+                        query =    "update layer_statistics set extent_min_x = 0, extent_min_y = 0,extent_max_x = 0,extent_max_y = 0 where table_name = '" + string.lower(outputname_ohnesuffix) + "'"
                         sqliteOut.ExecuteSQL(query)
 
                     else:
@@ -514,11 +541,11 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
 
 
                     #löschen des Geometrieeintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
-                    query =    "delete from geometry_columns where f_table_name = '" + outputname_ohnesuffix + "_temp_aktual'"
+                    query =    "delete from geometry_columns where f_table_name = '" + string.lower(outputname_ohnesuffix) + "_temp_aktual'"
                     sqliteOut.ExecuteSQL(query)
 
                     #löschen des Statistics Eintrags. Wenn eine Geometrielose Tabelle, passiert einfach nichts!
-                    query =    "delete from geometry_columns_statistics where f_table_name = '" + outputname_ohnesuffix + "_temp_aktual'"
+                    query =    "delete from geometry_columns_statistics where f_table_name = '" + string.lower(outputname_ohnesuffix) + "_temp_aktual'"
                     sqliteOut.ExecuteSQL(query)
 
 
