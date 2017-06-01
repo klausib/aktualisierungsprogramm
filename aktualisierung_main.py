@@ -866,6 +866,8 @@ try:
 
     #print loeschliste_tmp
 
+
+
     #nun noch nicht gelöschte Originaldateien der Datenbankaktualisierungen
     #löschen (eine Shape kann ja mehrmals vorkommen file, sqlite, postgis)
     for pfad in loeschliste_tmp:

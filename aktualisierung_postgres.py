@@ -71,9 +71,15 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
             inputpfad = str(os.path.dirname(row["quellpfad"]))
             outputdb = str(row["zielpfad"])
-            inputname = str(os.path.basename(row["quellpfad"]))
-            outputname = str(os.path.basename(row["quellpfad"]))
+            inputname = string.strip(str(os.path.basename(row["quellpfad"])))
+            outputname = string.strip(str(os.path.basename(row["quellpfad"])))
             postgisOut = ogr.Open(outputdb) #ACHTUNG: Schema nicht vergessen!
+            outputname = outputname.replace('-','_')
+            outputname = outputname.replace('ä','ae')
+            outputname = outputname.replace('ö','oe')
+            outputname = outputname.replace('ü','ue')
+            outputname = outputname.replace('ß','ss')
+            outputname = outputname.replace('/','_')
 
             #conenction string PG: host=vnvfelfs2 dbname=vogis schemas=public user=postgres password=postgres
 
@@ -92,16 +98,16 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
             #unsere drei zugelassen suffixe für Geodaten oder Tabellen
             if  (inputname.find('.csv') > -1):
-                outputname_ohnesuffix = inputname.replace('.csv','')
+                outputname_ohnesuffix = outputname.replace('.csv','')
                 inputname_ohnesuffix = inputname.replace('.csv','')
             elif  (inputname.find('.dbf') > -1):
-                outputname_ohnesuffix = inputname.replace('.dbf','')
+                outputname_ohnesuffix = outputname.replace('.dbf','')
                 inputname_ohnesuffix = inputname.replace('.dbf','')
             elif  (inputname.find('.shp') > -1):
-                outputname_ohnesuffix = inputname.replace('.shp','')
+                outputname_ohnesuffix = outputname.replace('.shp','')
                 inputname_ohnesuffix = inputname.replace('.shp','')
             elif  (inputname.find('.xlsx') > -1):
-                outputname_ohnesuffix = inputname.replace('.xlsx','')
+                outputname_ohnesuffix = outputname.replace('.xlsx','')
                 inputname_ohnesuffix = inputname.replace('.xlsx','')
 
             else:
