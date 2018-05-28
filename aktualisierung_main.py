@@ -12,6 +12,7 @@ from aktualisierung_sqlite import *
 from aktualisierung_postgres import *
 from indexabgleich import *
 from osgeo import ogr, osr,gdal
+from datetime import *
 
 
 
@@ -208,10 +209,10 @@ try:
     #Shapes, Tabellen, Dateien
     for row in rows:
 
-        inputpfad = str(os.path.dirname(row["quellpfad"]))
-        outputpfad = str(os.path.dirname(row["zielpfad"]))
-        inputname = str(os.path.basename(row["quellpfad"]))
-        outputname = str(os.path.basename(row["quellpfad"]))    # MÜSSEN GLEICH sein!!!!!!!!
+        inputpfad = string.strip(str(os.path.dirname(row["quellpfad"])))
+        outputpfad = string.strip(str(os.path.dirname(row["zielpfad"])))
+        inputname = string.strip(str(os.path.basename(row["quellpfad"])))
+        outputname = string.strip(str(os.path.basename(row["quellpfad"])))    # MÜSSEN GLEICH sein!!!!!!!!
 
         if not os.path.exists(inputpfad + '/' + inputname):
             logroutine(log_available,"Nicht bereitgestellt - " + str(row["primindex"]) + " " + inputpfad + '/' + inputname + '\r' ,False)    #Warnung setzen aber weitermachen
@@ -419,6 +420,8 @@ try:
 
                 #Wenns bis hierher geht, paßt alles, deshalb Quelldatensatz löschen
                 #if hilfsmodul.shapeLoeschen(inputpfad,inputname_ohnesuffix):
+                cursor_sqlite.execute("update kopierliste_file set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                db.commit()
                 logroutine(log_ok, "Kopieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r',False)
                 loeschliste.append(inputpfad + '/' + outputname)
                 #else:
@@ -437,6 +440,8 @@ try:
                     try:
                         shutil.copyfile(inputpfad + '/' + inputname, outputpfad + '/' + outputname)
                         #if hilfsmodul.dateiLoeschen(inputpfad,inputname):
+                        cursor_sqlite.execute("update kopierliste_file set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                        db.commit()
                         logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                         loeschliste.append(inputpfad + '/' + outputname)
                         #else:
@@ -476,6 +481,8 @@ try:
                             if not abgleich.indexAbgl() == 1:
                                 logroutine(log_warning,"Fehler beim Indexerzeugen - " + str(row["primindex"]) + " "  + inputpfad + '/' + outputname + '\r' ,False)
                         #if hilfsmodul.dateiLoeschen(inputpfad,inputname):
+                        cursor_sqlite.execute("update kopierliste_file set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                        db.commit()
                         logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                         loeschliste.append(inputpfad + '/' + outputname)
                         #else:
@@ -580,7 +587,7 @@ try:
 
 
                 if Attributliste.find("Fehler") >= 0:  #Das Stichwort Fehler wird zurückgegeben und wir brechen ab
-                    logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + " " + Attributliste + '\r' ,False)
+                    logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + " " + Attributliste.decode('utf8') + '\r' ,False)
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #zum nächsten Datensatz
 
@@ -676,6 +683,8 @@ try:
                     if hilfsmodul.shapeLoeschen(outputpfad,outputname_ohnesuffix + '_temp_original'):
 
                         #if hilfsmodul.shapeLoeschen(inputpfad,inputname_ohnesuffix):
+                        cursor_sqlite.execute("update kopierliste_file set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                        db.commit()
                         logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                         loeschliste.append(inputpfad + '/' + outputname)
                         #else:
@@ -705,6 +714,8 @@ try:
                     if os.path.exists(outputpfad + '/' + outputname):
                         shutil.copyfile(inputpfad + '/' + inputname, outputpfad + '/' + outputname)
                         #if hilfsmodul.dateiLoeschen(inputpfad,inputname):
+                        cursor_sqlite.execute("update kopierliste_file set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                        db.commit()
                         logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                         loeschliste.append(inputpfad + '/' + outputname)
                         #else:
@@ -766,7 +777,7 @@ try:
                                                                                 #Bei Problemen enthält er "Fehler:"
 
                 if Attributliste.find("Fehler") >= 0:  #Das Stichwort Fehler wird zurückgegeben und wir brechen ab
-                    logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + " " + Attributliste + '\r' ,False)
+                    logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + " " + Attributliste.decode('utf8') + '\r' ,False)
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #zum nächsten Datensatz
 
@@ -807,6 +818,8 @@ try:
                     abgleich = None
 
                     #if hilfsmodul.dateiLoeschen(inputpfad,inputname):
+                    cursor_sqlite.execute("update kopierliste_file set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                    db.commit()
                     logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     loeschliste.append(inputpfad + '/' + outputname)
                     #else:
@@ -896,8 +909,8 @@ except AssertionError:
     logroutine(log_error, 'Negative Bedingung - Abbruch notwendig' + '\r' ,True)
     sys.exit()
 
-except:
-    logroutine(log_error, 'Unbekannter Fehler' + '\r' ,True)
+except Exception as e:
+    logroutine(log_error,str(e) + '\r' ,True)
     sys.exit()
 
 

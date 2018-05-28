@@ -10,6 +10,7 @@ import hilfsmodul
 from hauptmodul import *
 from indexabgleich import *
 from osgeo import ogr, osr,gdal
+from datetime import *
 
 
 def logroutine(log_error, text,flag):
@@ -333,6 +334,8 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Stop hier: nächster Datensatz in der Liste
                 else:
+                    cursor_sqlite.execute("update kopierliste_sqlite set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                    db.commit()
                     logroutine(log_ok, "Kopieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     #Alles OK, das Original kann in die Liste
                     #der zu löschenden Shapes aufgenommen werden
@@ -384,7 +387,7 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                 #prüfen
                 Attributliste = dShape.verglAttr(sqliteOut.GetDriver().GetName())
                 if Attributliste.find("Fehler") >= 0:  #Das Stichwort Fehler wird zurückgegeben und wir brechen ab
-                        logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + inputname + " " + Attributliste + '\r' ,False)
+                        logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + inputname + " " + Attributliste.decode('utf8') + '\r' ,False)
                         #errorliste.append(inputpfad + '/' + inputname)
                         errorliste.append(inputpfad + '/' + outputname)
                         continue    #zum nächsten Datensatz
@@ -462,7 +465,7 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                     # damit das Insert funktioniert
                     temp_lyr = sqliteOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual"))
                     bestand_lyr = sqliteOut.GetLayerByName(string.lower(outputname_ohnesuffix))
-                    if temp_lyr.GetLayerDefn().GetFieldCount > bestand_lyr.GetLayerDefn().GetFieldCount:
+                    if temp_lyr.GetLayerDefn().GetFieldCount() > bestand_lyr.GetLayerDefn().GetFieldCount():
                         index = 0
                         while index < (temp_lyr.GetLayerDefn().GetFieldCount()):
                             def_temp = temp_lyr.GetLayerDefn().GetFieldDefn(index)
@@ -577,6 +580,8 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Stop hier: nächster Datensatz in der Liste
                 else:
+                    cursor_sqlite.execute("update kopierliste_sqlite set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                    db.commit()
                     logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     #Alles OK, das Original kann in die Liste
                     #der zu löschenden Shapes aufgenommen werden
@@ -611,6 +616,9 @@ def sqliteaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_index_
 
 
     except Exception as e:
-        return [],[]
+        errorliste.append(inputpfad + '/' + outputname)
+        logroutine(log_error,str(e) + '\r',False)
+        print 'Fehler' + str(e) + ' '+ str(loeschliste) + ' ' + str(errorliste)
+        return [],errorliste
 
 

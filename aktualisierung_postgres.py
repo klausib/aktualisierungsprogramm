@@ -9,6 +9,7 @@ import logging,string,shutil
 import hilfsmodul
 from hauptmodul import *
 from indexabgleich import *
+from datetime import *
 from osgeo import ogr, osr,gdal
 
 
@@ -60,6 +61,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
 
 
+
         #Hauptschleife, alle records abarbeiten
         for row in rows:
             #print row["zieltyp"] + " " +  row["quellpfad"]  + " " +  row["zielpfad"]
@@ -69,8 +71,8 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
             #aber ich finde es übersichtlicher ihn hier einfach nochmal zu verwenden anstatt
             #in ein Modul auszulagern
 
-            inputpfad = str(os.path.dirname(row["quellpfad"]))
-            outputdb = str(row["zielpfad"])
+            inputpfad = string.strip(str(os.path.dirname(row["quellpfad"])))
+            outputdb = string.strip(str(row["zielpfad"]))
             inputname = string.strip(str(os.path.basename(row["quellpfad"])))
             outputname = string.strip(str(os.path.basename(row["quellpfad"])))
             postgisOut = ogr.Open(outputdb) #ACHTUNG: Schema nicht vergessen!
@@ -81,14 +83,14 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
             outputname = outputname.replace('ß','ss')
             outputname = outputname.replace('/','_')
 
-            #conenction string PG: host=vnvfelfs2 dbname=vogis schemas=public user=postgres password=postgres
+            # conenction string PG: host=vnvfelfs2 dbname=vogis schemas=public user=postgres password=postgres
 
 
             if not os.path.exists(inputpfad + '/' + inputname):
                 logroutine(log_available,"Nicht bereitgestellt - " + str(row["primindex"]) + " " + inputpfad + '/' + inputname + '\r'  ,False)    #Warnung setzen aber weitermachen
                 continue    #nächster Datensatz
-            #Nun das Ziel des Kopierprozesses
-            #die Postgres DB Datenbank
+            # Nun das Ziel des Kopierprozesses
+            # die Postgres DB Datenbank
             if postgisOut == None:
                 logroutine(log_error,"Ausgangs POSTGRES Datenbank nicht gefunden: - " + str(row["primindex"]) + " " + outputdb + '\r'  ,False)    #Warnung setzen aber weitermachen
                 errorliste.append(inputpfad + '/' + inputname)
@@ -96,7 +98,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
 
 
-            #unsere drei zugelassen suffixe für Geodaten oder Tabellen
+            # unsere drei zugelassen suffixe für Geodaten oder Tabellen
             if  (inputname.find('.csv') > -1):
                 outputname_ohnesuffix = outputname.replace('.csv','')
                 inputname_ohnesuffix = inputname.replace('.csv','')
@@ -117,7 +119,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                 else:
                     logroutine(log_abgelehnt,"Dateityp nicht unterstuetzt - " + str(row["primindex"]) + " " + inputpfad + '/' + inputname + '\r' ,False)
                     errorliste.append(inputpfad + '/' + inputname)
-                    continue    #Stop hier: nächster Datensatz in der Liste
+                    continue    # Stop hier: nächster Datensatz in der Liste
 
 
 
@@ -355,6 +357,8 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     continue    #Stop hier: nächster Datensatz in der Liste
 
                 else:
+                    cursor_sqlite.execute("update kopierliste_postgres set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                    db.commit()
                     logroutine(log_ok, "Kopieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     #Alles OK, das Original kann in die Liste
                     #der zu löschenden Shapes aufgenommen werden
@@ -378,7 +382,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
 
                 #Das Flag ds_neu von 'ja' nach 'nein' stellen
                 primindex = row["primindex"]
-                cursor_sqlite.execute("update kopierliste_postgres set ds_neu = 'nein' where primindex = " + str(primindex) + "")
+                cursor_sqlite.execute("update kopierliste_postgres set ds_neu = 'nein' where primindex = " + str(row["primindex"]) + "")
                 db.commit()
 
 
@@ -398,7 +402,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                 #prüfen
                 Attributliste = dShape.verglAttr(postgisOut.GetDriver().GetName())
                 if Attributliste.find("Fehler") >= 0:  #Das Stichwort Fehler wird zurückgegeben und wir brechen ab
-                        logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + inputname + " " + Attributliste + '\r' ,False)
+                        logroutine(log_abgelehnt,"Fehler beim Vergleichen der Attribute - " + str(row["primindex"]) + " " + inputpfad + '/' + inputname + " " + Attributliste.decode('utf8') + '\r' ,False)
                         #errorliste.append(inputpfad + '/' + inputname)
                         errorliste.append(inputpfad + '/' + outputname)
                         continue    #zum nächsten Datensatz
@@ -434,7 +438,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                 rueckgabe = dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix) + '_temp_aktual',row["zieltyp"],row['nach_utf8'])
                 #if not dShape.kopieren(postgisOut,lyrIn,string.lower(outputname_ohnesuffix) + '_temp_aktual',row["zieltyp"]):   #outputname ist ja die sqlite Datei
                 if not rueckgabe[0]:   #outputname ist ja die sqlite Datei
-                    logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(rueckgabe[1]) + '\r',False)
+                    logroutine(log_error,"Fehler beim Aktualisieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(rueckgabe[1]) + '\r',False)
                     #errorliste.append(inputpfad + '/' + inputname)
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Stop: Ab zum nächsten Datensatz
@@ -480,7 +484,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     #Püfen ob auch wirklich alle Feature übernommen wurden
                     diff = lyrIn.GetFeatureCount() -  postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual")).GetFeatureCount()
                     if abs(diff) > 0:
-                        logroutine(log_error,"Fehler beim Kopieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(abs(diff)) + ' - Features fehlen' + '\r' ,False)
+                        logroutine(log_error,"Fehler beim Aktualisieren des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + ' ' + str(abs(diff)) + ' - Features fehlen' + '\r' ,False)
                         #errorliste.append(inputpfad + '/' + inputname)
                         errorliste.append(inputpfad + '/' + outputname)
                         # Temp Tabelle löschen
@@ -498,7 +502,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     # damit das Insert funktioniert
                     temp_lyr = postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix + "_temp_aktual"))
                     bestand_lyr = postgisOut.GetLayerByName(string.lower(outputname_ohnesuffix))
-                    if temp_lyr.GetLayerDefn().GetFieldCount > bestand_lyr.GetLayerDefn().GetFieldCount:
+                    if temp_lyr.GetLayerDefn().GetFieldCount() > bestand_lyr.GetLayerDefn().GetFieldCount():
                         index = 0
                         while index < (temp_lyr.GetLayerDefn().GetFieldCount()):
                             def_temp = temp_lyr.GetLayerDefn().GetFieldDefn(index)
@@ -511,7 +515,6 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                                 postgisOut.ExecuteSQL(query)
 
                             index = index + 1
-
 
                     if not geometriespalte == '':   # wenn es keine gibt ist die variable ''
                         query = "alter sequence " + string.lower(schema + '.' + outputname_ohnesuffix) + "_ogc_fid_seq restart with 1"
@@ -548,10 +551,8 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                 #POSTGIS Index aktualisieren:
                 #ACHTUNG: Vorlage für den Index ist der Index beim Shapefile oder des DBASE File.
                 #Der geometrische Index wird immer angelegt
-
                 abgleich = indexabgleich(lyrIn,dsIn,postgisOut.GetLayerByName(outputname_ohnesuffix),postgisOut, schema, False)
                 ret_ind = abgleich.indexAbgl()
-
                 if ret_ind == 4:
                     logroutine(log_index_missing,"Fehler beim Indizieren des des Datensatzes - " + str(row["primindex"]) + " "  + inputpfad + '/' + inputname + '\r' ,False)
 
@@ -565,6 +566,8 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
                     errorliste.append(inputpfad + '/' + outputname)
                     continue    #Stop hier: nächster Datensatz in der Liste
                 else:
+                    cursor_sqlite.execute("update kopierliste_postgres set datum_aktual = \'" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\' where primindex = " + str(row["primindex"]) + "")
+                    db.commit()
                     logroutine(log_ok, "Aktualisieren erfolgreich " + str(row["primindex"]) + " " + inputpfad + '/' + outputname + '\r' ,False)
                     #Alles OK, das Original kann in die Liste
                     #der zu löschenden Shapes aufgenommen werden
@@ -587,5 +590,7 @@ def postgresaktual(db,cursor_sqlite,log_error,log_warning,log_abgelehnt,log_inde
         return loeschliste, errorliste    #wir geben ein Tupel zurück
 
     except Exception as e:
-        print str(e)
-        return [],[]
+        errorliste.append(inputpfad + '/' + outputname)
+        logroutine(log_error,str(e) + '\r' ,False)
+        print 'Fehler' + str(e) + ' '+ str(loeschliste) + ' ' + str(errorliste)
+        return [],errorliste
